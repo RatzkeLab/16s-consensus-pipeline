@@ -1,0 +1,7 @@
+configfile: "demo/default_config.yaml"
+
+include: "rules/common.smk"
+
+rule all:
+    input:
+        CONSENSUS_DATABASE

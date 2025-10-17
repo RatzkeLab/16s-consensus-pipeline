@@ -1,0 +1,16 @@
+name: snakemake_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Workflow management
+  - snakemake>=7.0.0
+  #- mamba>=1.0.0
+  
+  # Python for running Snakemake and pipeline scripts
+  - python>=3.9
+
+# need to test this, but snakemake requires a conda installatoin 24.7.1 or higher
+# this higher version of conda can be installed within the environment without modifying the main conda installation
+  - conda>=24.7.1

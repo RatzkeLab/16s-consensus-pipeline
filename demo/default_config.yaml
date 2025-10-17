@@ -1,0 +1,23 @@
+# Demo configuration file for ONT demultiplexing pipeline
+# if no other config file is specified, this will be used by default
+
+# Input FASTQ directory (must contain at least one *.fastq.gz)
+fastq_input: "demo/merged/"
+
+filter:
+  min_avg_qscore: 10
+  min_length: 1300
+  max_length: 1700
+
+alignment:
+  sample_method: "random"
+  n_sequences: 150
+
+consensus:
+  n_bases_for_split: 100
+
+clustering:
+
+
+outdir: "demo_output"
+database_filename: "demo_db.fasta"

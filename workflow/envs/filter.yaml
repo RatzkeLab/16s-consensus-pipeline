@@ -1,0 +1,11 @@
+name: nanofilt
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3.10
+  - nanofilt>=2.8
+  - pandas
+  - numpy
+  - gzip
