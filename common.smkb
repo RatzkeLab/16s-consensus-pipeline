@@ -1,0 +1,83 @@
+########################################
+# Common helpers and configuration
+########################################
+from pathlib import Path
+import re
+import yaml
+
+def load_config(default_path="config/config.yaml", user_path="config/user_config.yaml"):
+    """Load user config if present; otherwise use default demo config."""
+    with open(default_path) as f:
+        cfg = yaml.safe_load(f)
+    up = Path(user_path)
+    if up.exists():
+        with open(up) as f:
+            cfg.update(yaml.safe_load(f))
+    # sensible defaults
+    cfg.setdefault("demux_dir", "data/demo/demux")
+    cfg.setdefault("output_dir", "results")
+    cfg.setdefault("min_quality", 10)
+    cfg.setdefault("trim_tail", 0)     # NanoFilt --tailcrop
+    cfg.setdefault("subsample_n", 150)
+    cfg.setdefault("subsample_seed", 42)
+    cfg.setdefault("min_reads_pre", 50)
+    cfg.setdefault("min_reads_post", 50)
+    cfg.setdefault("report_title", "16S Winner-Takes-All (Plurality) Consensus Report")
+    cfg.setdefault("mafft_threads", 1)
+    return cfg
+
+def get_samples(demux_dir):
+    """Return sample names without .fastq extension from demux_dir."""
+    return [re.sub(r"\.fastq$", "", f.name)
+            for f in Path(demux_dir).glob("*.fastq")]
+
+def build_nanofilt_args(min_quality, trim_tail):
+    """Compose NanoFilt CLI args string based on config."""
+    args = []
+    if int(min_quality) > 0:
+        args += ["-q", str(min_quality)]
+    if int(trim_tail) > 0:
+        args += ["--tailcrop", str(trim_tail)]
+    return " ".join(args)
+
+# Loaded config & convenience vars
+config = load_config()
+DEMUX = config["demux_dir"]
+OUT   = config["output_dir"]
+SAMPLES = get_samples(DEMUX)
+NANOFILT_ARGS = build_nanofilt_args(config["min_quality"], config["trim_tail"])
+SUBS_N = int(config["subsample_n"])
+SUBS_SEED = int(config["subsample_seed"])
+MIN_READS_PRE  = int(config["min_reads_pre"])
+MIN_READS_POST = int(config["min_reads_post"])
+TITLE = config["report_title"]
+MAFFT_THREADS = int(config["mafft_threads"])
+
+########################################
+# Dynamic helpers for checkpoints
+########################################
+# Snakemake will inject a 'checkpoints' object in Snakefile; we expose
+# named input functions (no lambdas) that it can call with wildcards.
+
+def _read_passed_list(path):
+    with open(path) as f:
+        return [ln.strip() for ln in f if ln.strip()]
+
+def passed_samples_from_checkpoint(wildcards):
+    # get() requires the checkpoint name; defined in Snakefile as 'collect_passed'
+    path = checkpoints.collect_passed.get(**wildcards).output.txt
+    return _read_passed_list(path)
+
+def consensus_targets_from_checkpoint(wildcards):
+    return [f"{OUT}/consensus/{s}.fasta" for s in passed_samples_from_checkpoint(wildcards)]
+
+def db_inputs_from_checkpoint(wildcards):
+    return consensus_targets_from_checkpoint(wildcards)
+
+def report_inputs_from_checkpoint(wildcards):
+    samples = passed_samples_from_checkpoint(wildcards)
+    cons = [f"{OUT}/consensus/{s}.fasta" for s in samples]
+    stats = [f"{OUT}/consensus_stats/{s}.csv" for s in samples]
+    pre = [f"{OUT}/checks/{s}_pre.tsv" for s in SAMPLES]   # all pre-checks (for transparency)
+    post= [f"{OUT}/checks/{s}_post.tsv" for s in SAMPLES]  # all post-checks
+    return cons + stats + pre + post
