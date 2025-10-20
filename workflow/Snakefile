@@ -1,7 +1,22 @@
 configfile: "demo/default_config.yaml"
 
 include: "rules/common.smk"
+include: "rules/filter.smk"
+include: "rules/split.smk"
+include: "rules/align.smk"
+include: "rules/consolodate.smk"
 
 rule all:
     input:
-        CONSENSUS_DATABASE
+        CONSENSUS_DATABASE,
+        str(QC_DIR / "pass" / "passing_samples.txt"),
+        passed_report_paths,
+        str(QC_DIR / "reports" / "alignment_summary.tsv"),
+        str(QC_DIR / "reports" / "consensus_summary.tsv")
+
+# After checkpoint, override dynamic sample lists
+use rule pass_samples as pass_samples_checkpoint with:
+    input: expand(str(QC_DIR / "filter" / "{sample}.json"), sample=BUNDLE_NAMES)
+
+def passed_samples_func(wildcards):
+    return get_passing_samples(wildcards)
