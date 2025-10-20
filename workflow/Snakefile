@@ -8,15 +8,20 @@ include: "rules/consolodate.smk"
 
 rule all:
     input:
-        CONSENSUS_DATABASE,
-        str(QC_DIR / "pass" / "passing_samples.txt"),
-        passed_report_paths,
-        str(QC_DIR / "reports" / "alignment_summary.tsv"),
-        str(QC_DIR / "reports" / "consensus_summary.tsv")
+        expand(f"{OUT}/consensus/{{sample}}.fasta", sample=SAMPLES),
+        f"{OUT}/consensus_db.fasta",
+        f"{OUT}/report/summary.html"
+# rule all:
+#     input:
+#         CONSENSUS_DATABASE,
+#         str(QC_DIR / "pass" / "passing_samples.txt"),
+#         passed_report_paths,
+#         str(QC_DIR / "reports" / "alignment_summary.tsv"),
+#         str(QC_DIR / "reports" / "consensus_summary.tsv")
 
-# After checkpoint, override dynamic sample lists
-use rule pass_samples as pass_samples_checkpoint with:
-    input: expand(str(QC_DIR / "filter" / "{sample}.json"), sample=BUNDLE_NAMES)
+# # After checkpoint, override dynamic sample lists
+# use rule pass_samples as pass_samples_checkpoint with:
+#     input: expand(str(QC_DIR / "filter" / "{sample}.json"), sample=BUNDLE_NAMES)
 
-def passed_samples_func(wildcards):
-    return get_passing_samples(wildcards)
+# def passed_samples_func(wildcards):
+#     return get_passing_samples(wildcards)

@@ -44,6 +44,32 @@ def load_bundle_names(input_dir: Path):
 
 BUNDLE_NAMES = load_bundle_names(INPUT_DIR)
 
+def get_samples(demux_dir):
+    """Return sample names without .fastq extension from demux_dir."""
+    return [re.sub(r"\.fastq$", "", f.name)
+            for f in Path(demux_dir).glob("*.fastq")]
+
+def build_nanofilt_args(min_quality, trim_tail):
+    """Compose NanoFilt CLI args string based on config."""
+    args = []
+    if int(min_quality) > 0:
+        args += ["-q", str(min_quality)]
+    if int(trim_tail) > 0:
+        args += ["--tailcrop", str(trim_tail)]
+    return " ".join(args)
+
+# Load config and convenience vars
+config = load_config()
+DEMUX = config["demux_dir"]
+OUT   = config["output_dir"]
+SAMPLES = get_samples(DEMUX)
+NANOFILT_ARGS = build_nanofilt_args(config["min_quality"], config["trim_tail"])
+SUBS_N = int(config["subsample_n"])
+SUBS_SEED = int(config["subsample_seed"])
+MIN_READS_PRE  = int(config["min_reads_pre"])
+MIN_READS_POST = int(config["min_reads_post"])
+TITLE = config["report_title"]
+
 
 # Checkpoint helpers
 def get_passing_samples(wildcards):
