@@ -12,7 +12,6 @@ FILTER_DIR = OUT_DIR / "filtered"
 SUBSAMPLE_DIR = OUT_DIR / "subsampled"
 ALIGNMENT_DIR = OUT_DIR / "alignment"
 CONSENSUS_DIR = OUT_DIR / "consensus"
-QC_DIR = OUT_DIR / "qc"
 LOG_DIR = OUT_DIR / "logs"
 
 # Thresholds and parameters
@@ -20,6 +19,9 @@ MIN_READS_INITIAL = config.get("min_reads_initial", 10)
 MIN_READS_FILTERED = config.get("min_reads_filtered", 5)
 SUBSAMPLE_N = config.get("subsample_n", 150)
 CONSENSUS_MIN_PROP = config.get("consensus", {}).get("min_consensus_proportion", 0.6)
+
+# Final outputs
+DATABASE_FILE = OUT_DIR / config.get("database_filename", "consensus_db.fasta")
 
 # NanoFilt parameters
 NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)
@@ -138,14 +140,6 @@ def get_aligned_samples(wildcards):
     return passing
 
 
-def get_alignment_files(wildcards):
-    """
-    Get list of alignment files for samples that passed post-filter checkpoint.
-    """
-    passing = get_aligned_samples(wildcards)
-    return [str(ALIGNMENT_DIR / f"{sample}.fasta") for sample in passing]
-
-
 def get_consensus_files(wildcards):
     """
     Get list of consensus FASTA files for samples that passed alignment.
@@ -186,5 +180,3 @@ ALL_SAMPLES = get_sample_names(INPUT_DIR)
 
 # Build NanoFilt parameters
 NANOFILT_PARAMS = build_nanofilt_params()
-
-

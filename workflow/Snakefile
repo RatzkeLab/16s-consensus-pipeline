@@ -14,17 +14,18 @@ include: "rules/filter.smk"
 include: "rules/subsample.smk"
 include: "rules/align.smk"
 include: "rules/consensus.smk"
+include: "rules/pool.smk"
 
 # ==================== Target Rule ====================
 
 rule all:
     """
-    Default target: generate consensus sequences for all passing samples.
+    Default target: generate pooled consensus database.
     """
     input:
         # Checkpoint outputs
         CHECK_DIR / "read_check_summary.tsv",
         CHECK_DIR / "filtered_check_summary.tsv",
-        # Consensus sequences for passing samples
-        get_consensus_files
+        # Final pooled database
+        DATABASE_FILE
     default_target: True

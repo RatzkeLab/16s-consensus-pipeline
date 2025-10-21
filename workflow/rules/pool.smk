@@ -1,13 +1,25 @@
-########################################
-# 8) Build consensus database (FASTA)
-########################################
-rule build_consensus_db:
-    input: db_inputs_from_checkpoint
+"""
+Pool all consensus sequences into a single database FASTA file.
+"""
+
+rule pool_consensus:
+    """
+    Concatenate all consensus sequences into a single database FASTA.
+    """
+    input:
+        consensus=get_consensus_files
     output:
-        db = f"{OUT}/consensus_db.fasta"
+        database=DATABASE_FILE
+    log:
+        LOG_DIR / "pool" / "consensus_db.log"
+    conda:
+        "../envs/qc.yaml"
     shell:
-        r"""
-        set -euo pipefail
-        mkdir -p "$(dirname {output.db})"
-        cat {input} > {output.db}
+        """
+        mkdir -p "$(dirname {output.database})"
+        
+        cat {input.consensus} > {output.database}
+        
+        NUM_SEQS=$(grep -c "^>" {output.database} || true)
+        echo "Pooled $NUM_SEQS consensus sequences into database" > {log}
         """
