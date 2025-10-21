@@ -43,6 +43,13 @@ filter:
 subsample_n: 150
 
 
+# ==================== Alignment ====================
+
+alignment:
+  # MAFFT alignment settings can go here if needed
+  auto: true
+
+
 # ==================== Consensus ====================
 
 consensus:
