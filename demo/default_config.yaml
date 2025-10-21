@@ -27,6 +27,8 @@ min_reads_filtered: 5
 # ==================== Filtering (NanoFilt) ====================
 
 filter:
+  headcrop: 0  # Number of bases to trim from the start
+  tailcrop: 0  # Number of bases to trim from the end
   # Minimum average Q-score for reads (0 to disable)
   min_avg_qscore: 10
   

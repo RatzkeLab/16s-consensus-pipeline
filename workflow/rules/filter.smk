@@ -14,6 +14,8 @@ rule filter_reads:
     - Minimum average Q-score
     - Minimum read length
     - Maximum read length
+    - Headcrop (trim from start)
+    - Tailcrop (trim from end)
     
     Only processes samples that passed the initial read count check.
     """
@@ -23,6 +25,8 @@ rule filter_reads:
         fastq=FILTER_DIR / "{sample}.fastq"
     params:
         nanofilt_params=NANOFILT_PARAMS,
+        headcrop=HEADCROP,
+        tailcrop=TAILCROP,
         sample="{sample}"
     log:
         LOG_DIR / "filter" / "{sample}.log"
@@ -39,15 +43,17 @@ rule filter_reads:
         # Log filtering parameters
         echo "Filtering sample {params.sample}" > {log}
         echo "Parameters: {params.nanofilt_params}" >> {log}
+        echo "Headcrop: {params.headcrop}" >> {log}
+        echo "Tailcrop: {params.tailcrop}" >> {log}
         echo "" >> {log}
         
         # Apply NanoFilt (or pass through if no parameters)
         if [ -n "{params.nanofilt_params}" ]; then
             # Decompress if needed and filter
             if [[ {input.fastq} == *.gz ]]; then
-                zcat {input.fastq} | NanoFilt {params.nanofilt_params} > {output.fastq} 2>> {log}
+                zcat {input.fastq} | NanoFilt {params.nanofilt_params} --headcrop {params.headcrop} --tailcrop {params.tailcrop} > {output.fastq} 2>> {log}
             else
-                cat {input.fastq} | NanoFilt {params.nanofilt_params} > {output.fastq} 2>> {log}
+                cat {input.fastq} | NanoFilt {params.nanofilt_params} --headcrop {params.headcrop} --tailcrop {params.tailcrop} > {output.fastq} 2>> {log}
             fi
             
             # Count filtered reads
