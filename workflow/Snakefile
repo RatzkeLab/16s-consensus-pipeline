@@ -15,17 +15,20 @@ include: "rules/subsample.smk"
 include: "rules/align.smk"
 include: "rules/consensus.smk"
 include: "rules/pool.smk"
+include: "rules/summary.smk"
 
 # ==================== Target Rule ====================
 
 rule all:
     """
-    Default target: generate pooled consensus database.
+    Default target: generate pooled consensus database and summary report.
     """
     input:
         # Checkpoint outputs
         CHECK_DIR / "read_check_summary.tsv",
         CHECK_DIR / "filtered_check_summary.tsv",
         # Final pooled database
-        DATABASE_FILE
+        DATABASE_FILE,
+        # Summary report
+        OUT_DIR / "pipeline_summary.md"
     default_target: True
