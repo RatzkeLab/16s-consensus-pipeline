@@ -6,6 +6,7 @@ channels:
 dependencies:
   - python>=3.10
   - nanofilt>=2.8
+  - seqtk
   - pandas
   - numpy
   - gzip

@@ -1,27 +1,32 @@
+"""
+16S Consensus Pipeline - Main Snakefile
+
+This pipeline processes Oxford Nanopore long-read 16S rRNA sequencing data
+to generate consensus sequences for each sample.
+"""
+
 configfile: "demo/default_config.yaml"
 
+# Include rule modules
 include: "rules/common.smk"
+include: "rules/check.smk"
 include: "rules/filter.smk"
-include: "rules/split.smk"
+include: "rules/subsample.smk"
 include: "rules/align.smk"
-include: "rules/consolodate.smk"
+
+# TODO: Re-enable these as they are developed
+# include: "rules/consensus.smk"
+
+# ==================== Target Rule ====================
 
 rule all:
+    """
+    Default target: generate alignments for all passing samples.
+    """
     input:
-        expand(f"{OUT}/consensus/{{sample}}.fasta", sample=SAMPLES),
-        f"{OUT}/consensus_db.fasta",
-        f"{OUT}/report/summary.html"
-# rule all:
-#     input:
-#         CONSENSUS_DATABASE,
-#         str(QC_DIR / "pass" / "passing_samples.txt"),
-#         passed_report_paths,
-#         str(QC_DIR / "reports" / "alignment_summary.tsv"),
-#         str(QC_DIR / "reports" / "consensus_summary.tsv")
-
-# # After checkpoint, override dynamic sample lists
-# use rule pass_samples as pass_samples_checkpoint with:
-#     input: expand(str(QC_DIR / "filter" / "{sample}.json"), sample=BUNDLE_NAMES)
-
-# def passed_samples_func(wildcards):
-#     return get_passing_samples(wildcards)
+        # Checkpoint outputs
+        CHECK_DIR / "read_check_summary.tsv",
+        CHECK_DIR / "filtered_check_summary.tsv",
+        # Alignments for passing samples
+        get_alignment_files
+    default_target: True

@@ -1,23 +1,62 @@
-# Demo configuration file for ONT demultiplexing pipeline
-# if no other config file is specified, this will be used by default
+# Demo configuration file for ONT 16S consensus pipeline
+# If no other config file is specified, this will be used by default
 
-# Input FASTQ directory (must contain at least one *.fastq.gz)
-fastq_input: "demo/merged/"
+# ==================== Input/Output ====================
+
+# Input directory containing FASTQ files (*.fastq or *.fastq.gz)
+input_dir: "demo/merged"
+
+# Output directory for all results
+outdir: "demo/demo_output"
+
+# Final database filename
+database_filename: "demo_db.fasta"
+
+
+# ==================== Quality Control ====================
+
+# Minimum number of reads required per sample (before filtering)
+# Samples with fewer reads will be excluded from analysis
+min_reads_initial: 10
+
+# Minimum number of reads required per sample (after filtering)
+# Samples with fewer reads will be excluded from alignment
+min_reads_filtered: 5
+
+
+# ==================== Filtering (NanoFilt) ====================
 
 filter:
+  # Minimum average Q-score for reads (0 to disable)
   min_avg_qscore: 10
+  
+  # Minimum read length in bases (0 to disable)
   min_length: 1300
+  
+  # Maximum read length in bases (0 to disable)
   max_length: 1700
 
+
+# ==================== Subsampling ====================
+
+# Number of reads to randomly subsample for alignment (0 = use all reads)
+subsample_n: 150
+
+
+# ==================== Alignment ====================
+
 alignment:
-  sample_method: "random"
-  n_sequences: 150
+  # MAFFT alignment settings can go here if needed
+  auto: true
+
+
+# ==================== Consensus ====================
 
 consensus:
+  # Number of bases to use for splitting consensus sequences
   n_bases_for_split: 100
 
+
+# ==================== Clustering ====================
+
 clustering:
-
-
-outdir: "demo_output"
-database_filename: "demo_db.fasta"

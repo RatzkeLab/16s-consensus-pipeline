@@ -1,102 +1,181 @@
 from pathlib import Path
 
-# Base directories and config
-OUT_DIR        = Path(config.get("outdir", "output"))
-INPUT_DIR      = Path(config.get("fastq_input", "demo/merged"))
+# ==================== Configuration ====================
+
+# Base directories
+INPUT_DIR = Path(config.get("input_dir", "demo/merged"))
+OUT_DIR = Path(config.get("outdir", "demo_output"))
 
 # Structured output directories
-FILTER_DIR     = OUT_DIR / "filtered"
-SAMPLE_DIR     = OUT_DIR / "sampled"
-ALIGNMENT_DIR  = OUT_DIR / "alignment"
-CONSENSUS_DIR  = OUT_DIR / "consensus"
-QC_DIR         = OUT_DIR / "qc"
-LOG_DIR        = OUT_DIR / "logs"
+CHECK_DIR = OUT_DIR / "checks"
+FILTER_DIR = OUT_DIR / "filtered"
+SUBSAMPLE_DIR = OUT_DIR / "subsampled"
+ALIGNMENT_DIR = OUT_DIR / "alignment"
+CONSENSUS_DIR = OUT_DIR / "consensus"
+QC_DIR = OUT_DIR / "qc"
+LOG_DIR = OUT_DIR / "logs"
 
-# Log subdirs
-LOG_FILTER     = LOG_DIR / "filter"
-LOG_ALIGNMENT  = LOG_DIR / "alignment"
-LOG_SAMPLE     = LOG_DIR / "sample"
-LOG_CONSENSUS  = LOG_DIR / "consensus"
+# Thresholds and parameters
+MIN_READS_INITIAL = config.get("min_reads_initial", 10)
+MIN_READS_FILTERED = config.get("min_reads_filtered", 5)
+SUBSAMPLE_N = config.get("subsample_n", 150)
 
-# Final database file
-CONSENSUS_DATABASE = OUT_DIR / config.get("database_filename", "db.fasta")
+# NanoFilt parameters
+NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)
+NANOFILT_MIN_LENGTH = config.get("filter", {}).get("min_length", 1300)
+NANOFILT_MAX_LENGTH = config.get("filter", {}).get("max_length", 1700)
 
 
-def load_bundle_names(input_dir: Path):
-    """Return list of sample names from FASTQ files in input_dir.
+# ==================== Helper Functions ====================
 
-    Supports both .fastq and .fastq.gz; takes unique stems.
+def get_sample_names(input_dir):
     """
-    names = []
-    for pattern in ("*.fastq", "*.fastq.gz"):
-        for p in sorted(input_dir.glob(pattern)):
-            stem = p.name
-            if stem.endswith(".fastq"):
-                stem = p.stem
-            elif stem.endswith(".fastq.gz"):
-                stem = p.name[:-9]
-            if stem:
-                names.append(stem)
-    names = sorted(set(names))
-    if not names:
-        raise ValueError(f"No *.fastq or *.fastq.gz files found in {input_dir}")
-    return names
-
-BUNDLE_NAMES = load_bundle_names(INPUT_DIR)
-
-def get_samples(demux_dir):
-    """Return sample names without .fastq extension from demux_dir."""
-    return [re.sub(r"\.fastq$", "", f.name)
-            for f in Path(demux_dir).glob("*.fastq")]
-
-def build_nanofilt_args(min_quality, trim_tail):
-    """Compose NanoFilt CLI args string based on config."""
-    args = []
-    if int(min_quality) > 0:
-        args += ["-q", str(min_quality)]
-    if int(trim_tail) > 0:
-        args += ["--tailcrop", str(trim_tail)]
-    return " ".join(args)
-
-# Load config and convenience vars
-config = load_config()
-DEMUX = config["demux_dir"]
-OUT   = config["output_dir"]
-SAMPLES = get_samples(DEMUX)
-NANOFILT_ARGS = build_nanofilt_args(config["min_quality"], config["trim_tail"])
-SUBS_N = int(config["subsample_n"])
-SUBS_SEED = int(config["subsample_seed"])
-MIN_READS_PRE  = int(config["min_reads_pre"])
-MIN_READS_POST = int(config["min_reads_post"])
-TITLE = config["report_title"]
+    Scan input directory for FASTQ files and return list of sample names.
+    
+    Supports both .fastq and .fastq.gz extensions.
+    Sample name is the filename without extension(s).
+    
+    Args:
+        input_dir: Path object or string pointing to input directory
+        
+    Returns:
+        Sorted list of unique sample names
+        
+    Raises:
+        ValueError: If no FASTQ files found in directory
+    """
+    input_path = Path(input_dir)
+    sample_names = set()
+    
+    # Scan for .fastq files
+    for fastq_file in input_path.glob("*.fastq"):
+        sample_names.add(fastq_file.stem)
+    
+    # Scan for .fastq.gz files
+    for fastq_gz in input_path.glob("*.fastq.gz"):
+        # Remove .fastq.gz to get sample name
+        sample_name = fastq_gz.name.replace(".fastq.gz", "")
+        sample_names.add(sample_name)
+    
+    if not sample_names:
+        raise ValueError(f"No FASTQ files found in {input_path}")
+    
+    return sorted(sample_names)
 
 
-# Checkpoint helpers
+def build_nanofilt_params():
+    """
+    Build NanoFilt parameter string from config.
+    
+    Returns:
+        String of command-line arguments for NanoFilt
+    """
+    params = []
+    
+    if NANOFILT_MIN_QUALITY > 0:
+        params.append(f"-q {NANOFILT_MIN_QUALITY}")
+    
+    if NANOFILT_MIN_LENGTH > 0:
+        params.append(f"-l {NANOFILT_MIN_LENGTH}")
+    
+    if NANOFILT_MAX_LENGTH > 0:
+        params.append(f"--maxlength {NANOFILT_MAX_LENGTH}")
+    
+    return " ".join(params)
+
+
 def get_passing_samples(wildcards):
-    """Load passing samples determined by the checkpoint.
-
-    Reads names from qc/pass/passing_samples.txt.
     """
-    pass_file = QC_DIR / "pass" / "passing_samples.txt"
-    with open(pass_file) as fh:
-        return [l.strip() for l in fh if l.strip()]
-
-
-def passed_report_paths(wildcards):
-    """Return per-sample report paths for samples that passed the checkpoint.
-
-    This function is intended for use in the `input` section of rules (Snakemake 9 linting).
+    Load list of samples that passed the initial read count checkpoint.
+    
+    Reads from the checkpoint output file containing passing sample names.
+    
+    Returns:
+        List of sample names that passed quality thresholds
     """
-    samples = get_passing_samples(wildcards)
-    return [str(QC_DIR / "reports" / f"{s}.html") for s in samples]
+    checkpoint_output = checkpoints.check_min_reads.get(**wildcards).output.passing
+    
+    passing = []
+    with open(checkpoint_output) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                passing.append(line)
+    
+    return passing
 
 
-def passed_alignment_qc(wildcards):
-    samples = get_passing_samples(wildcards)
-    return [str(QC_DIR / "alignment" / f"{s}.json") for s in samples]
+def get_filtered_fastq_files(wildcards):
+    """
+    Get list of filtered FASTQ files for samples that passed checkpoint.
+    
+    This function is used in aggregate rules that need all filtered files.
+    
+    Returns:
+        List of paths to filtered FASTQ files
+    """
+    passing = get_passing_samples(wildcards)
+    return [str(FILTER_DIR / f"{sample}.fastq") for sample in passing]
 
 
-def passed_consensus_qc(wildcards):
-    samples = get_passing_samples(wildcards)
-    return [str(QC_DIR / "consensus" / f"{s}.json") for s in samples]
+def get_aligned_samples(wildcards):
+    """
+    Load list of samples that passed the post-filter checkpoint.
+    
+    Returns:
+        List of sample names that passed filtered read count threshold
+    """
+    checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
+    
+    passing = []
+    with open(checkpoint_output) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                passing.append(line)
+    
+    return passing
+
+
+def get_alignment_files(wildcards):
+    """
+    Get list of alignment files for samples that passed post-filter checkpoint.
+    """
+    passing = get_aligned_samples(wildcards)
+    return [str(ALIGNMENT_DIR / f"{sample}.fasta") for sample in passing]
+
+
+def get_input_fastq(wildcards):
+    """
+    Get the input FASTQ file path for a sample.
+    
+    Checks for both .fastq and .fastq.gz extensions.
+    
+    Returns:
+        Path to the input FASTQ file
+    """
+    sample = wildcards.sample
+    
+    # Check for .fastq first
+    fastq_path = INPUT_DIR / f"{sample}.fastq"
+    if fastq_path.exists():
+        return str(fastq_path)
+    
+    # Check for .fastq.gz
+    fastq_gz_path = INPUT_DIR / f"{sample}.fastq.gz"
+    if fastq_gz_path.exists():
+        return str(fastq_gz_path)
+    
+    # If neither exists, return .fastq (will trigger error in rule)
+    return str(fastq_path)
+
+
+# ==================== Initialize ====================
+
+# Get all sample names from input directory
+ALL_SAMPLES = get_sample_names(INPUT_DIR)
+
+# Build NanoFilt parameters
+NANOFILT_PARAMS = build_nanofilt_params()
+
 
