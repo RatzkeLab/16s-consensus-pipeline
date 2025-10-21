@@ -3,7 +3,7 @@ this is a snakemake 9 pipeline that runs per sample given by the user, aggrigati
 use snakemake 9 best practices
 use snakemake 9 syntax
 avoid lambdas in rule inputs, rather put functions in common.smk
-i am currently totally overhauling the codebase, as it does not work in its current form. don't worry about backward compatibility.
+i am currently working on this project by myself and iterating quickly, so don't worry about backward compatibility.
 rules are found in workflow/rules
 scripts (including python) are found in workflow/scripts
 workflow/Snakefile is the main snakemake file
