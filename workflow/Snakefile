@@ -13,20 +13,18 @@ include: "rules/check.smk"
 include: "rules/filter.smk"
 include: "rules/subsample.smk"
 include: "rules/align.smk"
-
-# TODO: Re-enable these as they are developed
-# include: "rules/consensus.smk"
+include: "rules/consensus.smk"
 
 # ==================== Target Rule ====================
 
 rule all:
     """
-    Default target: generate alignments for all passing samples.
+    Default target: generate consensus sequences for all passing samples.
     """
     input:
         # Checkpoint outputs
         CHECK_DIR / "read_check_summary.tsv",
         CHECK_DIR / "filtered_check_summary.tsv",
-        # Alignments for passing samples
-        get_alignment_files
+        # Consensus sequences for passing samples
+        get_consensus_files
     default_target: True

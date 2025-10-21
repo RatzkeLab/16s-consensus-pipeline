@@ -19,6 +19,7 @@ LOG_DIR = OUT_DIR / "logs"
 MIN_READS_INITIAL = config.get("min_reads_initial", 10)
 MIN_READS_FILTERED = config.get("min_reads_filtered", 5)
 SUBSAMPLE_N = config.get("subsample_n", 150)
+CONSENSUS_MIN_PROP = config.get("consensus", {}).get("min_consensus_proportion", 0.6)
 
 # NanoFilt parameters
 NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)
@@ -143,6 +144,14 @@ def get_alignment_files(wildcards):
     """
     passing = get_aligned_samples(wildcards)
     return [str(ALIGNMENT_DIR / f"{sample}.fasta") for sample in passing]
+
+
+def get_consensus_files(wildcards):
+    """
+    Get list of consensus FASTA files for samples that passed alignment.
+    """
+    passing = get_aligned_samples(wildcards)
+    return [str(CONSENSUS_DIR / f"{sample}.fasta") for sample in passing]
 
 
 def get_input_fastq(wildcards):

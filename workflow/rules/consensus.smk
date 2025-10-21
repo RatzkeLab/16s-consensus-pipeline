@@ -1,19 +1,33 @@
-########################################
-# 7) Plurality consensus; record <50% sites to CSV
-########################################
-rule naive_consensus:
+"""
+Consensus sequence generation from alignments.
+"""
+
+rule consensus:
+    """
+    Generate naive consensus sequence using winner-takes-all approach.
+    Positions below threshold are marked as N and variants recorded.
+    """
     input:
-        aln = f"{OUT}/aln/{{sample}}.aln.fasta"
+        alignment=ALIGNMENT_DIR / "{sample}.fasta"
     output:
-        fa   = f"{OUT}/consensus/{{sample}}.fasta",
-        csv  = f"{OUT}/consensus_stats/{{sample}}.csv"
-    script:
-        "workflow/scripts/naive_consensus.py"
+        fasta=CONSENSUS_DIR / "{sample}.fasta",
+        variants=CONSENSUS_DIR / "{sample}_variants.tsv"
+    params:
+        sample="{sample}",
+        min_prop=CONSENSUS_MIN_PROP
     log:
-        f"logs/consensus_call/{{sample}}.log"
+        LOG_DIR / "consensus" / "{sample}.log"
+    conda:
+        "../envs/qc.yaml"
     shell:
-        r"""
-        set -euo pipefail
-        mkdir -p "$(dirname {output.fa})" "$(dirname {output.csv})" "$(dirname {log})"
-        python {script} > {output.fa} 2> {log}
+        """
+        mkdir -p "$(dirname {output.fasta})"
+        
+        python workflow/scripts/naive_consensus.py \
+          {input.alignment} \
+          {output.fasta} \
+          {output.variants} \
+          {params.sample} \
+          {params.min_prop} \
+          2> {log}
         """

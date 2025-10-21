@@ -53,10 +53,6 @@ alignment:
 # ==================== Consensus ====================
 
 consensus:
-  # Number of bases to use for splitting consensus sequences
-  n_bases_for_split: 100
-
-
-# ==================== Clustering ====================
-
-clustering:
+  # Minimum proportion required for winner-takes-all (0.6 = 60%)
+  # Below this threshold, all variants at position are recorded
+  min_consensus_proportion: 0.6
