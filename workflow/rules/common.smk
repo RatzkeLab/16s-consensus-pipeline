@@ -11,22 +11,29 @@ CHECK_DIR = OUT_DIR / "checks"
 FILTER_DIR = OUT_DIR / "filtered"
 SUBSAMPLE_DIR = OUT_DIR / "subsampled"
 ALIGNMENT_DIR = OUT_DIR / "alignment"
-CONSENSUS_DIR = OUT_DIR / "consensus"
+NAIVE_CONSENSUS_DIR = OUT_DIR / "naive_consensus"
+MULTI_CONSENSUS_DIR = OUT_DIR / "multi_consensus"
 LOG_DIR = OUT_DIR / "logs"
 
 # Thresholds and parameters
 MIN_READS_INITIAL = config.get("min_reads_initial", 10)
 MIN_READS_FILTERED = config.get("min_reads_filtered", 5)
 SUBSAMPLE_N = config.get("subsample_n", 150)
-CONSENSUS_MIN_PROP = config.get("consensus", {}).get("min_consensus_proportion", 0.6)
+NAIVE_CONSENSUS_MIN_PROP = config.get("naive_consensus", {}).get("min_consensus_proportion", 0.6)
+MULTI_CONSENSUS_MIN_AGREEMENT = config.get("multi_consensus", {}).get("min_agreement", 0.8)
+MULTI_CONSENSUS_MIN_CLUSTER_SIZE = config.get("multi_consensus", {}).get("min_cluster_size", 5)
+MULTI_CONSENSUS_MAX_HAMMING = config.get("multi_consensus", {}).get("max_hamming_distance", 5)
 
 # Final outputs
-DATABASE_FILE = OUT_DIR / config.get("database_filename", "consensus_db.fasta")
+NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
+MULTI_DATABASE_FILE = OUT_DIR / config.get("multi_database_filename", "multi_db.fasta")
 
 # NanoFilt parameters
 NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)
 NANOFILT_MIN_LENGTH = config.get("filter", {}).get("min_length", 1300)
 NANOFILT_MAX_LENGTH = config.get("filter", {}).get("max_length", 1700)
+HEADCROP = config.get("filter", {}).get("headcrop", 0)
+TAILCROP = config.get("filter", {}).get("tailcrop", 0)
 
 
 # ==================== Helper Functions ====================
@@ -140,12 +147,21 @@ def get_aligned_samples(wildcards):
     return passing
 
 
-def get_consensus_files(wildcards):
+def get_naive_consensus_files(wildcards):
     """
-    Get list of consensus FASTA files for samples that passed alignment.
+    Get list of naive consensus FASTA files for samples that passed alignment.
     """
     passing = get_aligned_samples(wildcards)
-    return [str(CONSENSUS_DIR / f"{sample}.fasta") for sample in passing]
+    return [str(NAIVE_CONSENSUS_DIR / f"{sample}.fasta") for sample in passing]
+
+
+def get_multi_consensus_dirs(wildcards):
+    """
+    Get list of multi-consensus output directories for all passing samples.
+    Each sample has its own subdirectory that may contain multiple cluster files.
+    """
+    passing = get_aligned_samples(wildcards)
+    return [str(MULTI_CONSENSUS_DIR / sample) for sample in passing]
 
 
 def get_input_fastq(wildcards):

@@ -9,8 +9,9 @@ input_dir: "demo/merged"
 # Output directory for all results
 outdir: "demo/demo_output"
 
-# Final database filename
-database_filename: "demo_db.fasta"
+# Final database filenames
+naive_database_filename: "naive_db.fasta"
+multi_database_filename: "multi_db.fasta"
 
 
 # ==================== Quality Control ====================
@@ -54,7 +55,18 @@ alignment:
 
 # ==================== Consensus ====================
 
-consensus:
+naive_consensus:
   # Minimum proportion required for winner-takes-all (0.6 = 60%)
   # Below this threshold, all variants at position are recorded
   min_consensus_proportion: 0.6
+
+multi_consensus:
+  # Minimum proportion for majority agreement at a position (0.8 = 80%)
+  # Positions below this threshold are used for clustering
+  min_agreement: 0.8
+  
+  # Minimum number of reads required to form a separate cluster
+  min_cluster_size: 5
+  
+  # Maximum Hamming distance for reads to be in the same cluster
+  max_hamming_distance: 5

@@ -4,25 +4,18 @@ Generate pipeline summary report.
 
 rule generate_summary:
     """
-    Create a summary report showing sample attrition through the pipeline.
+    Generate summary report showing sample attrition through pipeline stages.
     """
     input:
-        initial_check=CHECK_DIR / "read_check_summary.tsv",
-        filtered_check=CHECK_DIR / "filtered_check_summary.tsv",
-        database=DATABASE_FILE
+        read_summary = CHECK_DIR / "read_check_summary.tsv",
+        filter_summary = CHECK_DIR / "filtered_check_summary.tsv",
+        naive_db = NAIVE_DATABASE_FILE,
+        multi_db = MULTI_DATABASE_FILE
     output:
-        summary=OUT_DIR / "pipeline_summary.md"
-    log:
-        LOG_DIR / "summary" / "generate.log"
+        report = OUT_DIR / "pipeline_summary.md"
     conda:
         "../envs/qc.yaml"
-    shell:
-        """
-        python workflow/scripts/generate_summary.py \
-          {input.initial_check} \
-          {input.filtered_check} \
-          {output.summary} \
-          2> {log}
-        
-        echo "Summary report generated at {output.summary}" >> {log}
-        """
+    log:
+        LOG_DIR / "summary" / "generate_summary.log"
+    script:
+        "../scripts/generate_summary.py"

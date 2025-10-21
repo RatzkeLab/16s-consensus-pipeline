@@ -80,8 +80,9 @@ def main(initial_check, filtered_check, output_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        sys.stderr.write("Usage: generate_summary.py <initial_check.tsv> <filtered_check.tsv> <output.md>\n")
-        sys.exit(1)
-    
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    # Snakemake script interface
+    main(
+        snakemake.input.read_summary,
+        snakemake.input.filter_summary,
+        snakemake.output.report
+    )

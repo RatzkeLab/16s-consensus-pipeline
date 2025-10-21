@@ -14,6 +14,7 @@ include: "rules/filter.smk"
 include: "rules/subsample.smk"
 include: "rules/align.smk"
 include: "rules/consensus.smk"
+include: "rules/multi_consensus.smk"
 include: "rules/pool.smk"
 include: "rules/summary.smk"
 
@@ -21,14 +22,15 @@ include: "rules/summary.smk"
 
 rule all:
     """
-    Default target: generate pooled consensus database and summary report.
+    Default target: generate both naive and multi-consensus databases and summary report.
     """
     input:
         # Checkpoint outputs
         CHECK_DIR / "read_check_summary.tsv",
         CHECK_DIR / "filtered_check_summary.tsv",
-        # Final pooled database
-        DATABASE_FILE,
+        # Final pooled databases
+        NAIVE_DATABASE_FILE,
+        MULTI_DATABASE_FILE,
         # Summary report
         OUT_DIR / "pipeline_summary.md"
     default_target: True
