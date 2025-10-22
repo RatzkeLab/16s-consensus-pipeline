@@ -1,2 +1,3 @@
 .snakemake/
 demo/demo_output/
+demo/demo_output*/
