@@ -165,6 +165,14 @@ def get_multi_consensus_dirs(wildcards):
     return [str(MULTI_CONSENSUS_DIR / sample) for sample in passing]
 
 
+def get_cluster_alignment_dirs(wildcards):
+    """
+    Get list of cluster alignment visualization directories for all passing samples.
+    """
+    passing = get_aligned_samples(wildcards)
+    return [str(OUT_DIR / "cluster_alignments" / sample) for sample in passing]
+
+
 def get_input_fastq(wildcards):
     """
     Get the input FASTQ file path for a sample.

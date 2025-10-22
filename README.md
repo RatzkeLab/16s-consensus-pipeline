@@ -78,13 +78,36 @@ consensus:
 
 ```
 output_dir/
-├── filtered/           # NanoFilt filtered reads
-├── subsampled/         # Randomly subsampled reads
-├── alignments/         # MAFFT alignments
-├── consensus/          # Consensus sequences + variant TSVs
-├── {run_name}_db.fasta # Final pooled database
-├── pipeline_summary.md # Pipeline report
-└── logs/               # Logs for each step
+  naive_db.fasta              # Naive consensus database (winner-takes-all)
+  multi_db.fasta              # Multi-consensus database (with clustering)
+  pipeline_summary.md         # QC report
+  filtered/                   # Filtered FASTQs
+  subsampled/                 # Subsampled FASTQs
+  alignment/                  # Per-sample MSAs
+  naive_consensus/            # Per-sample naive consensus FASTAs
+  multi_consensus/            # Per-sample multi-consensus FASTAs (may have A, B, C variants)
+  checks/                     # QC checkpoint files
+  logs/                       # Per-sample logs
+```
+
+## Advanced Usage
+
+**Visualize cluster separation (optional):**
+```bash
+conda activate snakemake_env
+snakemake visualize -c 4 --use-conda
+# Creates cluster_alignments/ with per-cluster alignment files
+```
+
+**Clean outputs and re-run:**
+```bash
+snakemake --delete-all-output
+snakemake -c 4 --use-conda
+```
+
+**View summary report:**
+```bash
+cat output_dir/pipeline_summary.md
 ```
 
 ## Troubleshooting

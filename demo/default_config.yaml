@@ -71,7 +71,7 @@ multi_consensus:
   # Minimum cluster size as percentage of total reads (0-100)
   # Whichever is larger (absolute or percent) will be used
   # Set to 0 to only use absolute min_cluster_size
-  min_cluster_size_percent: 3.0
+  min_cluster_size_percent: 5.0
   
   # Maximum number of clusters to consider
   # Hierarchical clustering will automatically find optimal number up to this limit

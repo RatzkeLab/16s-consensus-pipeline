@@ -272,8 +272,18 @@ def main():
         sys.stderr.write(f"Single consensus written to {args.sample}.fasta\n")
         return
     
-    # Generate consensus for each cluster
+    # Write cluster assignments for visualization
     cluster_labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    with open(outdir / "cluster_assignments.tsv", "w") as f:
+        f.write("read_id\tcluster\n")
+        for i, cluster in enumerate(sorted(valid_clusters, key=len, reverse=True)):
+            label = cluster_labels[i] if i < len(cluster_labels) else str(i)
+            for read_id in sorted(cluster):
+                f.write(f"{read_id}\t{label}\n")
+    
+    sys.stderr.write(f"Wrote cluster assignments to cluster_assignments.tsv\n")
+    
+    # Generate consensus for each cluster
     for i, cluster in enumerate(sorted(valid_clusters, key=len, reverse=True)):
         label = cluster_labels[i] if i < len(cluster_labels) else str(i)
         cluster_seqs = {h: seqs[h] for h in cluster}
