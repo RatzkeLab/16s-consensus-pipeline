@@ -65,8 +65,13 @@ multi_consensus:
   # Positions below this threshold are used for clustering
   min_agreement: 0.8
   
-  # Minimum number of reads required to form a separate cluster
+  # Minimum number of reads required to form a separate cluster (absolute)
   min_cluster_size: 5
+  
+  # Minimum cluster size as percentage of total reads (0-100)
+  # Whichever is larger (absolute or percent) will be used
+  # Set to 0 to only use absolute min_cluster_size
+  min_cluster_size_percent: 3.0
   
   # Maximum number of clusters to consider
   # Hierarchical clustering will automatically find optimal number up to this limit

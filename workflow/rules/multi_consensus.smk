@@ -18,6 +18,7 @@ rule multi_consensus:
         sample="{sample}",
         min_agreement=MULTI_CONSENSUS_MIN_AGREEMENT,
         min_cluster_size=MULTI_CONSENSUS_MIN_CLUSTER_SIZE,
+        min_cluster_size_percent=MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters=MULTI_CONSENSUS_MAX_CLUSTERS,
         min_prop=NAIVE_CONSENSUS_MIN_PROP
     log:
@@ -34,6 +35,7 @@ rule multi_consensus:
           {params.sample} \
           --min_agreement {params.min_agreement} \
           --min_cluster_size {params.min_cluster_size} \
+          --min_cluster_size_percent {params.min_cluster_size_percent} \
           --max_clusters {params.max_clusters} \
           --min_consensus_prop {params.min_prop} \
           2> {log}

@@ -188,7 +188,9 @@ def main():
     parser.add_argument("--min_agreement", type=float, default=0.8,
                         help="Minimum agreement at position to not be variable")
     parser.add_argument("--min_cluster_size", type=int, default=5,
-                        help="Minimum reads per cluster")
+                        help="Minimum reads per cluster (absolute)")
+    parser.add_argument("--min_cluster_size_percent", type=float, default=0.0,
+                        help="Minimum reads per cluster as percent of total (0-100)")
     parser.add_argument("--max_clusters", type=int, default=10,
                         help="Maximum number of clusters to consider")
     parser.add_argument("--min_consensus_prop", type=float, default=0.6,
@@ -241,9 +243,19 @@ def main():
     clusters = hierarchical_cluster(profiles, max_clusters=args.max_clusters)
     sys.stderr.write(f"Found {len(clusters)} clusters\n")
     
+    # Calculate minimum cluster size
+    # Use whichever is larger: absolute min or percentage-based min
+    total_reads = len(seqs)
+    min_size_from_percent = int(total_reads * (args.min_cluster_size_percent / 100.0))
+    effective_min_size = max(args.min_cluster_size, min_size_from_percent)
+    
+    sys.stderr.write(f"Minimum cluster size: {effective_min_size} reads "
+                    f"(absolute={args.min_cluster_size}, "
+                    f"percent={args.min_cluster_size_percent}% = {min_size_from_percent} reads)\n")
+    
     # Filter clusters by size
-    valid_clusters = [c for c in clusters if len(c) >= args.min_cluster_size]
-    sys.stderr.write(f"{len(valid_clusters)} clusters meet minimum size of {args.min_cluster_size}\n")
+    valid_clusters = [c for c in clusters if len(c) >= effective_min_size]
+    sys.stderr.write(f"{len(valid_clusters)} clusters meet minimum size threshold\n")
     
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
