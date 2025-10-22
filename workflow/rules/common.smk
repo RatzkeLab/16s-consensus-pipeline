@@ -12,6 +12,10 @@ FILTER_DIR = OUT_DIR / "filtered"
 SUBSAMPLE_DIR = OUT_DIR / "subsampled"
 ALIGNMENT_DIR = OUT_DIR / "alignment"
 NAIVE_CONSENSUS_DIR = OUT_DIR / "naive_consensus"
+CLUSTER_DETECTION_DIR = OUT_DIR / "cluster_detection"
+SPLIT_READS_DIR = OUT_DIR / "split_reads"
+CLUSTER_ALIGNMENT_DIR = OUT_DIR / "cluster_alignments"
+CLUSTER_CONSENSUS_DIR = OUT_DIR / "cluster_consensus"
 MULTI_CONSENSUS_DIR = OUT_DIR / "multi_consensus"
 LOG_DIR = OUT_DIR / "logs"
 
@@ -148,6 +152,29 @@ def get_aligned_samples(wildcards):
     return passing
 
 
+def get_cluster_samples(wildcards):
+    """
+    Get list of samples that have cluster alignments created.
+    
+    This function checks which samples have been processed through
+    the realign_clusters step by looking at the cluster alignment directory.
+    
+    Returns:
+        List of sample names with cluster alignments
+    """
+    # First get all samples that made it to alignment
+    passing = get_aligned_samples(wildcards)
+    
+    cluster_samples = []
+    for sample in passing:
+        # Check if this sample has cluster alignments
+        sample_cluster_dir = CLUSTER_ALIGNMENT_DIR / sample
+        if sample_cluster_dir.exists() and list(sample_cluster_dir.glob("*.fasta")):
+            cluster_samples.append(sample)
+    
+    return cluster_samples
+
+
 def get_naive_consensus_files(wildcards):
     """
     Get list of naive consensus FASTA files for samples that passed alignment.
@@ -169,11 +196,75 @@ def get_cluster_alignment_dirs(wildcards):
     """
     Get list of cluster alignment visualization directories for all passing samples.
     """
+    # Use discovered samples that actually have cluster alignments
+    samples = get_cluster_samples(wildcards)
+    return [str(OUT_DIR / "cluster_alignments" / sample) for sample in samples]
+
+
+def get_cluster_fastqs_for_sample(wildcards):
+    """
+    Get list of cluster FASTQ files for a sample after split_reads checkpoint.
+    
+    Returns either:
+    - [sample.fastq] if no clusters detected
+    - [sample_A.fastq, sample_B.fastq, ...] if clusters detected
+    """
+    checkpoint_output = checkpoints.split_reads.get(**wildcards).output.outdir
+    split_dir = Path(checkpoint_output)
+    
+    # Find all FASTQ files in the split directory
+    fastq_files = list(split_dir.glob("*.fastq"))
+    
+    return [str(f) for f in sorted(fastq_files)]
+
+
+def get_all_cluster_fastqs(wildcards):
+    """
+    Get all cluster FASTQ files for all passing samples.
+    
+    Used by aggregation rules that need to process all clusters.
+    """
     passing = get_aligned_samples(wildcards)
-    return [str(OUT_DIR / "cluster_alignments" / sample) for sample in passing]
+    all_fastqs = []
+    
+    for sample in passing:
+        # Get cluster FASTQs for this sample
+        sample_wildcards = type('obj', (object,), {'sample': sample})
+        fastqs = get_cluster_fastqs_for_sample(sample_wildcards)
+        all_fastqs.extend(fastqs)
+    
+    return all_fastqs
+
+
+def get_all_cluster_consensus_files(wildcards):
+    """
+    Get all cluster consensus files for all passing samples.
+    
+    For each sample, discovers which clusters exist and returns
+    the corresponding consensus file paths.
+    """
+    passing = get_aligned_samples(wildcards)
+    all_consensus = []
+    
+    for sample in passing:
+        # Get split reads checkpoint output for this sample
+        checkpoint_output = checkpoints.split_reads.get(sample=sample).output.outdir
+        split_dir = Path(checkpoint_output)
+        
+        # Find all FASTQ files to determine cluster names
+        fastq_files = list(split_dir.glob("*.fastq"))
+        
+        # Generate consensus file paths for each cluster
+        for fastq in sorted(fastq_files):
+            cluster_name = fastq.stem  # Remove .fastq extension
+            consensus_file = CLUSTER_CONSENSUS_DIR / sample / f"{cluster_name}.fasta"
+            all_consensus.append(str(consensus_file))
+    
+    return all_consensus
 
 
 def get_input_fastq(wildcards):
+
     """
     Get the input FASTQ file path for a sample.
     
