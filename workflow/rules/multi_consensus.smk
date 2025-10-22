@@ -6,8 +6,8 @@ rule multi_consensus:
     """
     Generate multiple consensus sequences if sample contains multiple clusters.
     
-    Analyzes alignment for positions with low agreement, creates per-read profiles,
-    clusters reads based on Hamming distance, and generates consensus for each cluster.
+    Uses hierarchical clustering to automatically detect optimal number of clusters
+    based on dendrogram structure.
     """
     input:
         alignment=ALIGNMENT_DIR / "{sample}.fasta"
@@ -18,7 +18,7 @@ rule multi_consensus:
         sample="{sample}",
         min_agreement=MULTI_CONSENSUS_MIN_AGREEMENT,
         min_cluster_size=MULTI_CONSENSUS_MIN_CLUSTER_SIZE,
-        max_hamming=MULTI_CONSENSUS_MAX_HAMMING,
+        max_clusters=MULTI_CONSENSUS_MAX_CLUSTERS,
         min_prop=NAIVE_CONSENSUS_MIN_PROP
     log:
         LOG_DIR / "multi_consensus" / "{sample}.log"
@@ -34,7 +34,7 @@ rule multi_consensus:
           {params.sample} \
           --min_agreement {params.min_agreement} \
           --min_cluster_size {params.min_cluster_size} \
-          --max_hamming {params.max_hamming} \
+          --max_clusters {params.max_clusters} \
           --min_consensus_prop {params.min_prop} \
           2> {log}
         """

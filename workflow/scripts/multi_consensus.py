@@ -5,7 +5,7 @@ Multi-consensus generation for samples with multiple 16S copy numbers or contami
 This script:
 1. Identifies positions in alignment with low consensus (<min_agreement)
 2. Creates per-read profile based on variants at these positions
-3. Clusters reads using Hamming distance
+3. Clusters reads using hierarchical clustering
 4. Generates consensus for each cluster if min_cluster_size is met
 """
 
@@ -13,7 +13,9 @@ import sys
 import argparse
 from pathlib import Path
 from collections import Counter, defaultdict
-from itertools import combinations
+import numpy as np
+from scipy.cluster.hierarchy import linkage, fcluster, dendrogram
+from scipy.spatial.distance import pdist, squareform
 
 
 def read_fasta(path):
@@ -74,45 +76,76 @@ def hamming_distance(profile1, profile2):
     return sum(c1 != c2 for c1, c2 in zip(profile1, profile2))
 
 
-def cluster_reads(profiles, max_hamming):
-    """Cluster reads based on Hamming distance using simple agglomerative approach."""
-    # Start with each read in its own cluster
-    clusters = {header: {header} for header in profiles.keys()}
+def hierarchical_cluster(profiles, max_clusters=10):
+    """
+    Cluster reads using hierarchical clustering with automatic cut height detection.
     
-    # Calculate all pairwise distances
+    Uses scipy's hierarchical clustering to build a dendrogram, then finds the
+    optimal cut height by looking for the largest gap in merge distances.
+    
+    Args:
+        profiles: Dict of {header: profile_tuple}
+        max_clusters: Maximum number of clusters to consider (default: 10)
+    
+    Returns:
+        List of clusters, where each cluster is a set of read headers
+    """
+    if len(profiles) < 2:
+        return [set(profiles.keys())]
+    
     headers = list(profiles.keys())
+    n = len(headers)
     
-    # Merge clusters if distance <= threshold
-    merged = True
-    while merged:
-        merged = False
-        cluster_ids = list(clusters.keys())
-        
-        for i, id1 in enumerate(cluster_ids):
-            if id1 not in clusters:
-                continue
-            for id2 in cluster_ids[i+1:]:
-                if id2 not in clusters:
-                    continue
-                
-                # Check if any members of the two clusters are within threshold
-                min_dist = float('inf')
-                for h1 in clusters[id1]:
-                    for h2 in clusters[id2]:
-                        dist = hamming_distance(profiles[h1], profiles[h2])
-                        min_dist = min(min_dist, dist)
-                
-                if min_dist <= max_hamming:
-                    # Merge clusters
-                    clusters[id1].update(clusters[id2])
-                    del clusters[id2]
-                    merged = True
-                    break
-            
-            if merged:
-                break
+    # Build distance matrix
+    distances = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            dist = hamming_distance(profiles[headers[i]], profiles[headers[j]])
+            distances.append(dist)
     
-    return list(clusters.values())
+    # Perform hierarchical clustering using average linkage
+    Z = linkage(distances, method='average')
+    
+    # Find optimal cut height by looking for largest gap in merge distances
+    # Z[:, 2] contains the distances at which clusters were merged
+    merge_distances = Z[:, 2]
+    
+    # Calculate gaps between consecutive merges
+    gaps = np.diff(merge_distances)
+    
+    # Find the largest gap (but limit to reasonable number of clusters)
+    max_gap_idx = -1
+    max_gap = -1
+    
+    # Only consider gaps that would result in 2 to max_clusters clusters
+    # (n - 1 - idx) gives number of clusters after that merge
+    for idx in range(len(gaps)):
+        num_clusters = n - idx - 1
+        if 2 <= num_clusters <= max_clusters and gaps[idx] > max_gap:
+            max_gap = gaps[idx]
+            max_gap_idx = idx
+    
+    if max_gap_idx == -1:
+        # No good gap found, return single cluster
+        sys.stderr.write("No significant clustering gap found, using single cluster\n")
+        return [set(headers)]
+    
+    # Cut dendrogram at the merge just before the largest gap
+    cut_height = merge_distances[max_gap_idx] + (gaps[max_gap_idx] / 2)
+    num_clusters = n - max_gap_idx - 1
+    
+    sys.stderr.write(f"Hierarchical clustering: cutting at height {cut_height:.1f} "
+                    f"(gap={max_gap:.1f}) -> {num_clusters} clusters\n")
+    
+    # Get cluster labels
+    cluster_labels = fcluster(Z, cut_height, criterion='distance')
+    
+    # Group headers by cluster
+    clusters_dict = defaultdict(set)
+    for i, label in enumerate(cluster_labels):
+        clusters_dict[label].add(headers[i])
+    
+    return list(clusters_dict.values())
 
 
 def generate_consensus(seqs_dict, min_prop):
@@ -148,14 +181,18 @@ def generate_consensus(seqs_dict, min_prop):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate multi-consensus sequences")
+    parser = argparse.ArgumentParser(description="Generate multi-consensus sequences using hierarchical clustering")
     parser.add_argument("alignment", help="Input alignment FASTA file")
     parser.add_argument("outdir", help="Output directory")
     parser.add_argument("sample", help="Sample name")
-    parser.add_argument("--min_agreement", type=float, default=0.8)
-    parser.add_argument("--min_cluster_size", type=int, default=5)
-    parser.add_argument("--max_hamming", type=int, default=5)
-    parser.add_argument("--min_consensus_prop", type=float, default=0.6)
+    parser.add_argument("--min_agreement", type=float, default=0.8,
+                        help="Minimum agreement at position to not be variable")
+    parser.add_argument("--min_cluster_size", type=int, default=5,
+                        help="Minimum reads per cluster")
+    parser.add_argument("--max_clusters", type=int, default=10,
+                        help="Maximum number of clusters to consider")
+    parser.add_argument("--min_consensus_prop", type=float, default=0.6,
+                        help="Minimum proportion for consensus base")
     
     args = parser.parse_args()
     
@@ -200,8 +237,8 @@ def main():
     # Create profiles
     profiles = create_read_profiles(seqs, variable_positions)
     
-    # Cluster reads
-    clusters = cluster_reads(profiles, args.max_hamming)
+    # Cluster reads using hierarchical clustering
+    clusters = hierarchical_cluster(profiles, max_clusters=args.max_clusters)
     sys.stderr.write(f"Found {len(clusters)} clusters\n")
     
     # Filter clusters by size
