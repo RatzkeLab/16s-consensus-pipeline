@@ -12,7 +12,8 @@ rule subsample:
     output:
         fastq=SUBSAMPLE_DIR / "{sample}.fastq"
     params:
-        n=SUBSAMPLE_N
+        n=SUBSAMPLE_N,
+        seed=SUBSAMPLE_SEED
     log:
         LOG_DIR / "subsample" / "{sample}.log"
     conda:
@@ -28,8 +29,8 @@ rule subsample:
             cp {input.fastq} {output.fastq}
             echo "Using all $TOTAL_READS reads (threshold: {params.n})" > {log}
         else
-            # Randomly subsample
-            seqtk sample -s 42 {input.fastq} {params.n} > {output.fastq} 2>> {log}
+            # Randomly subsample (deterministic with configured seed)
+            seqtk sample -s {params.seed} {input.fastq} {params.n} > {output.fastq} 2>> {log}
             echo "Subsampled {params.n} from $TOTAL_READS reads" >> {log}
         fi
         """

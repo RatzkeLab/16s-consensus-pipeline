@@ -45,6 +45,11 @@ filter:
 # Number of reads to randomly subsample for alignment (0 = use all reads)
 subsample_n: 150
 
+# Subsampling settings
+subsample:
+  # Fixed random seed for deterministic subsampling (seqtk -s)
+  seed: 42
+
 
 # ==================== Alignment ====================
 
