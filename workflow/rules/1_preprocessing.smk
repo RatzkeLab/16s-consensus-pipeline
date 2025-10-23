@@ -1,7 +1,15 @@
 """
-Quality control checkpoint rules for the 16S consensus pipeline.
+Preprocessing rules for the 16S consensus pipeline.
 
-This module contains checkpoint rules that filter samples based on quality metrics.
+This module handles the initial quality control and filtering stages of the pipeline:
+1. Count raw reads per sample
+2. Filter samples based on minimum read count threshold (checkpoint)
+3. Apply quality and length filtering with NanoFilt
+4. Re-count filtered reads and apply second threshold (checkpoint)
+
+Pipeline position: FIRST stage
+Upstream: Raw input FASTQ files
+Downstream: subsample.smk (subsampling of filtered reads)
 """
 
 # ==================== Per-Sample Read Count ====================
@@ -9,6 +17,9 @@ This module contains checkpoint rules that filter samples based on quality metri
 rule count_reads:
     """
     Count the number of reads in each sample's FASTQ file.
+    
+    Upstream: Raw input FASTQ files (configured in config.yaml)
+    Downstream: checkpoint check_min_reads (aggregates all counts)
     
     Produces a TSV report with read count for the sample.
     """
@@ -50,6 +61,9 @@ rule count_reads:
 checkpoint check_min_reads:
     """
     Check if samples have minimum required number of reads.
+    
+    Upstream: rule count_reads (all samples)
+    Downstream: rule filter_reads (only passing samples)
     
     This checkpoint evaluates all samples' read counts and creates:
     - A list of passing samples (for downstream processing)
@@ -120,11 +134,85 @@ checkpoint check_min_reads:
         """
 
 
+# ==================== NanoFilt Filtering ====================
+
+rule filter_reads:
+    """
+    Filter reads using NanoFilt based on quality and length thresholds.
+    
+    Upstream: checkpoint check_min_reads (only processes passing samples)
+    Downstream: checkpoint check_min_reads_filtered (counts filtered reads)
+    
+    Applies the following filters (if configured > 0):
+    - Minimum average Q-score
+    - Minimum read length
+    - Maximum read length
+    - Headcrop (trim from start)
+    - Tailcrop (trim from end)
+    
+    Only processes samples that passed the initial read count check.
+    """
+    input:
+        fastq=get_input_fastq
+    output:
+        fastq=FILTER_DIR / "{sample}.fastq"
+    params:
+        nanofilt_params=NANOFILT_PARAMS,
+        headcrop=HEADCROP,
+        tailcrop=TAILCROP,
+        sample="{sample}"
+    log:
+        LOG_DIR / "filter" / "{sample}.log"
+    conda:
+        "../envs/filter.yaml"
+    threads: 1
+    shell:
+        """
+        set -euo pipefail
+        
+        # Create output directory
+        mkdir -p "$(dirname {output.fastq})" "$(dirname {log})"
+        
+        # Log filtering parameters
+        echo "Filtering sample {params.sample}" > {log}
+        echo "Parameters: {params.nanofilt_params}" >> {log}
+        echo "Headcrop: {params.headcrop}" >> {log}
+        echo "Tailcrop: {params.tailcrop}" >> {log}
+        echo "" >> {log}
+        
+        # Apply NanoFilt (or pass through if no parameters)
+        if [ -n "{params.nanofilt_params}" ]; then
+            # Decompress if needed and filter
+            if [[ {input.fastq} == *.gz ]]; then
+                zcat {input.fastq} | NanoFilt {params.nanofilt_params} --headcrop {params.headcrop} --tailcrop {params.tailcrop} > {output.fastq} 2>> {log}
+            else
+                cat {input.fastq} | NanoFilt {params.nanofilt_params} --headcrop {params.headcrop} --tailcrop {params.tailcrop} > {output.fastq} 2>> {log}
+            fi
+            
+            # Count filtered reads
+            FILTERED_READS=$(awk 'END{{print NR/4}}' {output.fastq})
+            echo "" >> {log}
+            echo "Filtered reads: $FILTERED_READS" >> {log}
+        else
+            # No filtering - just copy/decompress
+            if [[ {input.fastq} == *.gz ]]; then
+                zcat {input.fastq} > {output.fastq}
+            else
+                cp {input.fastq} {output.fastq}
+            fi
+            echo "No filtering applied (pass-through)" >> {log}
+        fi
+        """
+
+
 # ==================== Post-Filter Read Count ====================
 
 rule count_filtered_reads:
     """
     Count reads in filtered FASTQ files.
+    
+    Upstream: rule filter_reads (filtered FASTQs)
+    Downstream: checkpoint check_min_reads_filtered (aggregates filtered counts)
     """
     input:
         fastq=FILTER_DIR / "{sample}.fastq"
@@ -145,9 +233,17 @@ rule count_filtered_reads:
         """
 
 
+# ==================== Post-Filter Checkpoint ====================
+
 checkpoint check_min_reads_filtered:
     """
     Check if filtered samples have minimum required reads for alignment.
+    
+    Upstream: rule count_filtered_reads (all filtered samples)
+    Downstream: subsample.smk (rule subsample - only passing filtered samples)
+    
+    This second checkpoint ensures samples still have enough reads after
+    quality filtering to proceed with alignment and consensus calling.
     """
     input:
         reports=get_filtered_fastq_files

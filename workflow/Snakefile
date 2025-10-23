@@ -9,17 +9,12 @@ configfile: "demo/default_config.yaml"
 
 # Include rule modules
 include: "rules/common.smk"
-include: "rules/check.smk"
-include: "rules/filter.smk"
-include: "rules/subsample.smk"
-include: "rules/align.smk"
-include: "rules/consensus.smk"
-include: "rules/detect_clusters.smk"
-include: "rules/split_reads.smk"
-include: "rules/realign_clusters.smk"
-include: "rules/cluster_consensus.smk"
-include: "rules/pool.smk"
-include: "rules/summary.smk"
+include: "rules/1_preprocessing.smk"
+include: "rules/2_align.smk"
+include: "rules/3_naive_consensus.smk"
+include: "rules/4_clustering.smk"
+include: "rules/5_cluster_consensus.smk"
+include: "rules/6_summary.smk"
 
 # ==================== Target Rule ====================
 
