@@ -24,6 +24,11 @@ MIN_READS_INITIAL = config.get("min_reads_initial", 10)
 MIN_READS_FILTERED = config.get("min_reads_filtered", 5)
 SUBSAMPLE_N = config.get("subsample_n", 150)
 NAIVE_CONSENSUS_MIN_PROP = config.get("naive_consensus", {}).get("min_consensus_proportion", 0.6)
+# For multi-consensus, default to the naive value, or 0.6 if neither is set
+MULTI_CONSENSUS_MIN_PROP = config.get("multi_consensus", {}).get(
+    "min_consensus_proportion",
+    NAIVE_CONSENSUS_MIN_PROP if 'NAIVE_CONSENSUS_MIN_PROP' in globals() else 0.6,
+)
 MULTI_CONSENSUS_MIN_AGREEMENT = config.get("multi_consensus", {}).get("min_agreement", 0.8)
 MULTI_CONSENSUS_MIN_CLUSTER_SIZE = config.get("multi_consensus", {}).get("min_cluster_size", 5)
 MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT = config.get("multi_consensus", {}).get("min_cluster_size_percent", 0.0)

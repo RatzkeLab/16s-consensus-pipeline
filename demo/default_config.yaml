@@ -76,3 +76,7 @@ multi_consensus:
   # Maximum number of clusters to consider
   # Hierarchical clustering will automatically find optimal number up to this limit
   max_clusters: 10
+
+  # Minimum proportion required for winner-takes-all (0.6 = 60%)
+  # Below this threshold, all variants at position are recorded
+  min_consensus_proportion: 0.6
