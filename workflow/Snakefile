@@ -18,7 +18,6 @@ include: "rules/detect_clusters.smk"
 include: "rules/split_reads.smk"
 include: "rules/realign_clusters.smk"
 include: "rules/cluster_consensus.smk"
-include: "rules/visualize_clusters.smk"
 include: "rules/pool.smk"
 include: "rules/summary.smk"
 
@@ -38,17 +37,3 @@ rule all:
         # Summary report
         OUT_DIR / "pipeline_summary.md"
     default_target: True
-
-
-rule visualize:
-    """
-    Generate per-cluster alignments for quality checking.
-    
-    Run this after the main pipeline to create separate alignment files
-    for each cluster detected by multi_consensus. Useful for visually
-    inspecting cluster separation quality.
-    
-    Usage: snakemake visualize -c <cores> --use-conda
-    """
-    input:
-        get_cluster_alignment_dirs

@@ -200,15 +200,6 @@ def get_multi_consensus_dirs(wildcards):
     return [str(MULTI_CONSENSUS_DIR / sample) for sample in passing]
 
 
-def get_cluster_alignment_dirs(wildcards):
-    """
-    Get list of cluster alignment visualization directories for all passing samples.
-    """
-    # Use discovered samples that actually have cluster alignments
-    samples = get_cluster_samples(wildcards)
-    return [str(OUT_DIR / "cluster_alignments" / sample) for sample in samples]
-
-
 def get_cluster_fastqs_for_sample(wildcards):
     """
     Get list of cluster FASTQ files for a sample after split_reads checkpoint.
