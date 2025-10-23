@@ -16,3 +16,4 @@ if there are two ways of doing something, prefer the simpler way, but also feel 
 if there is unclarity about what is meant when I give you instructions, ask for clarification
 for now, try to be brief and compact as possible in each rule and each function you write - use good practice, but leave out bells, whistles, and optimisations, let's just get the basic minimum viable product working first
 running snakemake -c 4 --use-conda should run the pipeline on the demo data in demo/ with 4 cores, and is a good way to check that everything is working on real data
+when i ask a question (in "Ask" mode rather than in "Agent" mode), i want you to give a brief answer to my question, and only provide examples with code when I specifically ask for them.
