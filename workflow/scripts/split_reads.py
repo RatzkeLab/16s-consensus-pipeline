@@ -19,7 +19,9 @@ def read_cluster_assignments(assignment_file):
         for line in f:
             parts = line.strip().split('\t')
             if len(parts) >= 2:
-                read_id = parts[0]
+                # Extract just the UUID (first part before space) to match FASTQ parsing
+                full_id = parts[0]
+                read_id = full_id.split()[0] if ' ' in full_id else full_id
                 cluster = parts[1]
                 assignments[read_id] = cluster
     return assignments
