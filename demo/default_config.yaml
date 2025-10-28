@@ -1,10 +1,11 @@
 # Demo configuration file for ONT 16S consensus pipeline
-# If no other config file is specified, this will be used by default
+# If no other config file is specified (using the --config modifier), this will be used by default
 
 # ==================== Input/Output ====================
 
 # Input directory containing FASTQ files (*.fastq or *.fastq.gz)
-input_dir: "demo/merged"
+# if demultiplexing using minibar, make sure you have reversed backwards reads first
+input_dir: "demo/unflipped"
 
 # Output directory for all results
 outdir: "demo/demo_output"
