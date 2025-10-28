@@ -67,6 +67,10 @@ naive_consensus:
   min_consensus_proportion: 0.6
 
 multi_consensus:
+  # Minimum number of variable positions required to attempt clustering
+  # If fewer positions are variable than this value, clustering/splitting will be skipped
+  min_variable_positions: 3
+
   # Minimum proportion for majority agreement at a position (0.8 = 80%)
   # Positions below this threshold are used for clustering
   min_agreement: 0.8
@@ -86,3 +90,4 @@ multi_consensus:
   # Minimum proportion required for winner-takes-all (0.6 = 60%)
   # Below this threshold, all variants at position are recorded
   min_consensus_proportion: 0.6
+

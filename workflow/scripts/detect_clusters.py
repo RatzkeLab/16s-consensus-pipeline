@@ -144,6 +144,8 @@ def main():
     parser.add_argument("--min_cluster_size", type=int, default=5)
     parser.add_argument("--min_cluster_size_percent", type=float, default=0.0)
     parser.add_argument("--max_clusters", type=int, default=10)
+    parser.add_argument("--min_variable_positions", type=int, default=3,
+                        help="Minimum number of variable positions required to attempt clustering")
     
     args = parser.parse_args()
     
@@ -167,8 +169,11 @@ def main():
     variable_positions = identify_variable_positions(seqs, args.min_agreement)
     sys.stderr.write(f"Found {len(variable_positions)} variable positions\n")
     
-    if len(variable_positions) < 3:
-        sys.stderr.write(f"Too few variable positions for meaningful clustering\n")
+    if len(variable_positions) < args.min_variable_positions:
+        sys.stderr.write(
+            f"Too few variable positions for meaningful clustering "
+            f"(found={len(variable_positions)}, required={args.min_variable_positions})\n"
+        )
         with open(outdir / "no_clusters.txt", "w") as f:
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - single cluster\n")

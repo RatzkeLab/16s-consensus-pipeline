@@ -40,7 +40,8 @@ rule detect_clusters:
         min_agreement=MULTI_CONSENSUS_MIN_AGREEMENT,
         min_cluster_size=MULTI_CONSENSUS_MIN_CLUSTER_SIZE,
         min_cluster_size_percent=MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT,
-        max_clusters=MULTI_CONSENSUS_MAX_CLUSTERS
+        max_clusters=MULTI_CONSENSUS_MAX_CLUSTERS,
+        min_variable_positions=MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
     conda:
@@ -55,6 +56,7 @@ rule detect_clusters:
           --min_cluster_size {params.min_cluster_size} \
           --min_cluster_size_percent {params.min_cluster_size_percent} \
           --max_clusters {params.max_clusters} \
+          --min_variable_positions {params.min_variable_positions} \
           2> {log}
         """
 
