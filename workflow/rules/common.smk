@@ -40,6 +40,8 @@ MULTI_CONSENSUS_MAX_CLUSTERS = config.get("multi_consensus", {}).get("max_cluste
 # Final outputs
 NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
 MULTI_DATABASE_FILE = OUT_DIR / config.get("multi_database_filename", "multi_db.fasta")
+PAIRWISE_DISTANCE_FILE = OUT_DIR / config.get("pairwise_distance_filename", "pairwise_distances.tsv")
+MULTI_ALIGNMENT_FILE = OUT_DIR / config.get("multi_alignment_filename", "all_consensus_alignment.fasta")
 
 # NanoFilt parameters
 NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)
