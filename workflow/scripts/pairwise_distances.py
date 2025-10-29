@@ -62,13 +62,43 @@ def edit_distance(s1, s2):
     return dp[m][n]
 
 
+def trim_sequences(sequences, ignore_first_n_bp, ignore_last_n_bp):
+    """Trim sequences by removing first and last N bp.
+    
+    Args:
+        sequences: Dict of {header: sequence}
+        ignore_first_n_bp: Number of bp to remove from start
+        ignore_last_n_bp: Number of bp to remove from end
+    
+    Returns:
+        Dict of trimmed sequences
+    """
+    trimmed = {}
+    for header, seq in sequences.items():
+        seq_len = len(seq)
+        start = min(ignore_first_n_bp, seq_len)
+        end = max(start, seq_len - ignore_last_n_bp)
+        trimmed[header] = seq[start:end]
+    
+    return trimmed
+
+
 def main():
     # Get input/output from snakemake
     input_fasta = snakemake.input.multi_db
     output_tsv = snakemake.output.distances
+    ignore_first_n_bp = snakemake.params.ignore_first_n_bp
+    ignore_last_n_bp = snakemake.params.ignore_last_n_bp
     
     # Parse sequences
     sequences = parse_fasta(input_fasta)
+    
+    # Trim sequences
+    if ignore_first_n_bp > 0 or ignore_last_n_bp > 0:
+        print(f"Trimming sequences: ignoring first {ignore_first_n_bp} bp and last {ignore_last_n_bp} bp",
+              file=sys.stderr)
+        sequences = trim_sequences(sequences, ignore_first_n_bp, ignore_last_n_bp)
+    
     seq_names = list(sequences.keys())
     
     # Calculate pairwise distances

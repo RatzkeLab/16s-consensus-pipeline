@@ -40,15 +40,28 @@ def read_fasta(path):
     return seqs
 
 
-def identify_variable_positions(seqs, min_agreement):
-    """Identify positions where consensus is below threshold."""
+def identify_variable_positions(seqs, min_agreement, trim_bp=70):
+    """Identify positions where consensus is below threshold.
+    
+    Args:
+        seqs: Dictionary of sequences
+        min_agreement: Maximum agreement threshold for variable positions
+        trim_bp: Number of bp to ignore at start and end of alignment (default: 70)
+    """
     if not seqs:
         return []
     
     aln_len = len(list(seqs.values())[0])
     variable_positions = []
     
-    for pos in range(aln_len):
+    # Define the region to analyze (excluding first and last trim_bp)
+    start_pos = trim_bp
+    end_pos = aln_len - trim_bp
+    
+    sys.stderr.write(f"Analyzing positions {start_pos} to {end_pos} "
+                    f"(ignoring first/last {trim_bp} bp)\n")
+    
+    for pos in range(start_pos, end_pos):
         column = [seq[pos] for seq in seqs.values()]
         counter = Counter(column)
         total = len(column)
@@ -146,6 +159,8 @@ def main():
     parser.add_argument("--max_clusters", type=int, default=10)
     parser.add_argument("--min_variable_positions", type=int, default=3,
                         help="Minimum number of variable positions required to attempt clustering")
+    parser.add_argument("--trim_bp", type=int, default=70,
+                        help="Number of bp to ignore at start and end of alignment")
     
     args = parser.parse_args()
     
@@ -166,7 +181,7 @@ def main():
         return
     
     # Identify variable positions
-    variable_positions = identify_variable_positions(seqs, args.min_agreement)
+    variable_positions = identify_variable_positions(seqs, args.min_agreement, args.trim_bp)
     sys.stderr.write(f"Found {len(variable_positions)} variable positions\n")
     
     if len(variable_positions) < args.min_variable_positions:

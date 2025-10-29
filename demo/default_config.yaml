@@ -14,6 +14,15 @@ outdir: "demo/demo_output"
 naive_database_filename: "naive_db.fasta"
 multi_database_filename: "multi_db.fasta"
 
+# Pairwise edit distance report
+pairwise_distance:
+  # Number of bp to ignore at start of sequences when calculating distances
+  # (reduces noise from alignment artifacts at sequence ends)
+  ignore_first_n_bp: 70
+  
+  # Number of bp to ignore at end of sequences when calculating distances
+  ignore_last_n_bp: 70
+
 
 # ==================== Quality Control ====================
 
@@ -81,6 +90,10 @@ multi_consensus:
   # Minimum number of variable positions required to attempt clustering
   # If fewer positions are variable than this value, clustering/splitting will be skipped
   min_variable_positions: 3
+
+  # Number of bp to ignore at start and end of alignment when detecting clusters
+  # (reduces noise from alignment artifacts at ends)
+  trim_bp: 70
 
   # Minimum proportion for majority agreement at a position (0.8 = 80%)
   # Positions below this threshold are used for clustering

@@ -25,6 +25,9 @@ rule pairwise_edit_distance:
         multi_db = MULTI_DATABASE_FILE
     output:
         distances = PAIRWISE_DISTANCE_FILE
+    params:
+        ignore_first_n_bp = PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP,
+        ignore_last_n_bp = PAIRWISE_DISTANCE_IGNORE_LAST_N_BP
     conda:
         "../envs/qc.yaml"
     log:
