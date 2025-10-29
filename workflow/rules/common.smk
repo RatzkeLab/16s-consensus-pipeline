@@ -129,16 +129,37 @@ def build_nanofilt_params():
     return " ".join(params)
 
 # MAFFT algorithm flags
-def _build_mafft_flags(algorithm):
-    """Helper to build MAFFT flags from algorithm choice."""
+def _build_mafft_flags(algorithm, gap_open=0, gap_extend=0):
+    """
+    Helper to build MAFFT flags from algorithm choice and gap penalties.
+    
+    Args:
+        algorithm: Algorithm choice ("auto", "ginsi", or "default"/"")
+        gap_open: Gap opening penalty (0 = use MAFFT defaults)
+        gap_extend: Gap extension penalty (0 = use MAFFT defaults)
+    
+    Returns:
+        String of MAFFT command-line flags
+    """
+    flags = []
+    
+    # Algorithm flags
     if algorithm == "default" or algorithm == "":
-        return ""
+        pass  # No algorithm flag
     elif algorithm == "auto":
-        return "--auto"
+        flags.append("--auto")
     elif algorithm == "ginsi":
-        return "--globalpair --maxiterate 1000"
+        flags.append("--globalpair --maxiterate 1000")
     else:
         raise ValueError(f"Unknown mafft_algorithm: {algorithm}. Must be 'auto' or 'ginsi'")
+    
+    # Gap penalty flags
+    if gap_open > 0:
+        flags.append(f"--op {gap_open}")
+    if gap_extend > 0:
+        flags.append(f"--ep {gap_extend}")
+    
+    return " ".join(flags)
 
 def get_input_fastq(wildcards):
     """
@@ -221,6 +242,19 @@ ALL_SAMPLES = get_sample_names(INPUT_DIR)
 # Build NanoFilt parameters
 NANOFILT_PARAMS = build_nanofilt_params()
 
-MAFFT_ALIGN_FLAGS = _build_mafft_flags(config.get("alignment", {}).get("mafft_algorithm", "default"))
-MAFFT_CLUSTER_ALIGN_FLAGS = _build_mafft_flags(config.get("cluster_alignment", {}).get("mafft_algorithm", "default"))
-MAFFT_MULTI_ALIGN_FLAGS = _build_mafft_flags(config.get("multi_alignment", {}).get("mafft_algorithm", "default"))
+# Build MAFFT flags for each alignment context
+MAFFT_ALIGN_FLAGS = _build_mafft_flags(
+    config.get("alignment", {}).get("mafft_algorithm", "default"),
+    config.get("alignment", {}).get("gap_open", 0),
+    config.get("alignment", {}).get("gap_extend", 0)
+)
+MAFFT_CLUSTER_ALIGN_FLAGS = _build_mafft_flags(
+    config.get("cluster_alignment", {}).get("mafft_algorithm", "default"),
+    config.get("cluster_alignment", {}).get("gap_open", 0),
+    config.get("cluster_alignment", {}).get("gap_extend", 0)
+)
+MAFFT_MULTI_ALIGN_FLAGS = _build_mafft_flags(
+    config.get("multi_alignment", {}).get("mafft_algorithm", "default"),
+    config.get("multi_alignment", {}).get("gap_open", 0),
+    config.get("multi_alignment", {}).get("gap_extend", 0)
+)
