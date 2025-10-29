@@ -78,12 +78,14 @@ rule align:
     conda:
         "../envs/align.yaml"
     threads: 4
+    params:
+        mafft_flags=MAFFT_ALIGN_FLAGS
     shell:
         """
         mkdir -p "$(dirname {output.alignment})"
         
         # Convert FASTQ to FASTA and align with MAFFT
         awk 'NR%4==1{{print ">"substr($0,2)}} NR%4==2{{print}}' {input.fastq} \
-          | mafft --thread {threads} --auto - \
+          | mafft --thread {threads} {params.mafft_flags} - \
           > {output.alignment} 2> {log}
         """

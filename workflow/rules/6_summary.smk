@@ -52,9 +52,11 @@ rule multi_align_consensus:
     log:
         LOG_DIR / "summary" / "multi_align.log"
     threads: 4
+    params:
+        mafft_flags=MAFFT_MULTI_ALIGN_FLAGS
     shell:
         """
-        mafft --auto --thread {threads} {input.multi_db} > {output.alignment} 2> {log}
+        mafft {params.mafft_flags} --thread {threads} {input.multi_db} > {output.alignment} 2> {log}
         """
 
 

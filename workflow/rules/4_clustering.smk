@@ -125,8 +125,10 @@ rule realign_cluster:
         LOG_DIR / "realign_cluster" / "{sample}_{cluster}.log"
     conda:
         "../envs/align.yaml"
+    params:
+        mafft_flags=MAFFT_CLUSTER_ALIGN_FLAGS
     shell:
         """
         seqkit fq2fa {input.fastq} 2>> {log} | \
-        mafft --auto --thread 1 - > {output.fasta} 2>> {log}
+        mafft {params.mafft_flags} --thread 1 - > {output.fasta} 2>> {log}
         """

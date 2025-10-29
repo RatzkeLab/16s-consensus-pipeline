@@ -55,8 +55,19 @@ subsample:
 # ==================== Alignment ====================
 
 alignment:
-  # MAFFT alignment settings can go here if needed
-  auto: true
+  # MAFFT algorithm for per-sample alignment
+  # Options: "auto" (fast) or "ginsi" (accurate, slow)
+  mafft_algorithm: "auto"
+  
+cluster_alignment:
+  # MAFFT algorithm for cluster realignment
+  # Options: "auto" (fast) or "ginsi" (accurate, slow)
+  mafft_algorithm: "auto"
+  
+multi_alignment:
+  # MAFFT algorithm for final multi-sequence alignment
+  # Options: "auto" (fast) or "ginsi" (accurate, slow)
+  mafft_algorithm: "auto"
 
 
 # ==================== Consensus ====================

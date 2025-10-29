@@ -51,6 +51,20 @@ NANOFILT_MAX_LENGTH = config.get("filter", {}).get("max_length", 1700)
 HEADCROP = config.get("filter", {}).get("headcrop", 0)
 TAILCROP = config.get("filter", {}).get("tailcrop", 0)
 
+# MAFFT algorithm flags
+def _build_mafft_flags(algorithm):
+    """Helper to build MAFFT flags from algorithm choice."""
+    if algorithm == "auto":
+        return "--auto"
+    elif algorithm == "ginsi":
+        return "--globalpair --maxiterate 1000"
+    else:
+        raise ValueError(f"Unknown mafft_algorithm: {algorithm}. Must be 'auto' or 'ginsi'")
+
+MAFFT_ALIGN_FLAGS = _build_mafft_flags(config.get("alignment", {}).get("mafft_algorithm", "auto"))
+MAFFT_CLUSTER_ALIGN_FLAGS = _build_mafft_flags(config.get("cluster_alignment", {}).get("mafft_algorithm", "auto"))
+MAFFT_MULTI_ALIGN_FLAGS = _build_mafft_flags(config.get("multi_alignment", {}).get("mafft_algorithm", "auto"))
+
 
 # ==================== Helper Functions ====================
 
