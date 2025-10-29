@@ -1,4 +1,19 @@
 from pathlib import Path
+import sys
+
+# Add scripts directory to path for imports
+sys.path.insert(0, str(Path(workflow.basedir) / "scripts"))
+from checkpoint_helpers import (
+    get_passing_samples as _get_passing_samples,
+    get_aligned_samples as _get_aligned_samples,
+    get_filtered_fastq_files as _get_filtered_fastq_files,
+    get_cluster_samples as _get_cluster_samples,
+    get_naive_consensus_files as _get_naive_consensus_files,
+    get_multi_consensus_dirs as _get_multi_consensus_dirs,
+    get_cluster_fastqs_for_sample as _get_cluster_fastqs_for_sample,
+    get_all_cluster_fastqs as _get_all_cluster_fastqs,
+    get_all_cluster_consensus_files as _get_all_cluster_consensus_files,
+)
 
 # ==================== Configuration ====================
 
@@ -124,163 +139,7 @@ def build_nanofilt_params():
     return " ".join(params)
 
 
-def get_passing_samples(wildcards):
-    """
-    Load list of samples that passed the initial read count checkpoint.
-    
-    Reads from the checkpoint output file containing passing sample names.
-    
-    Returns:
-        List of sample names that passed quality thresholds
-    """
-    checkpoint_output = checkpoints.check_min_reads.get(**wildcards).output.passing
-    
-    passing = []
-    with open(checkpoint_output) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                passing.append(line)
-    
-    return passing
-
-
-def get_filtered_fastq_files(wildcards):
-    """
-    Get list of filtered FASTQ files for samples that passed checkpoint.
-    
-    This function is used in aggregate rules that need all filtered files.
-    
-    Returns:
-        List of paths to filtered FASTQ files
-    """
-    passing = get_passing_samples(wildcards)
-    return [str(FILTER_DIR / f"{sample}.fastq") for sample in passing]
-
-
-def get_aligned_samples(wildcards):
-    """
-    Load list of samples that passed the post-filter checkpoint.
-    
-    Returns:
-        List of sample names that passed filtered read count threshold
-    """
-    checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
-    
-    passing = []
-    with open(checkpoint_output) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                passing.append(line)
-    
-    return passing
-
-
-def get_cluster_samples(wildcards):
-    """
-    Get list of samples that have cluster alignments created.
-    
-    This function checks which samples have been processed through
-    the realign_clusters step by looking at the cluster alignment directory.
-    
-    Returns:
-        List of sample names with cluster alignments
-    """
-    # First get all samples that made it to alignment
-    passing = get_aligned_samples(wildcards)
-    
-    cluster_samples = []
-    for sample in passing:
-        # Check if this sample has cluster alignments
-        sample_cluster_dir = CLUSTER_ALIGNMENT_DIR / sample
-        if sample_cluster_dir.exists() and list(sample_cluster_dir.glob("*.fasta")):
-            cluster_samples.append(sample)
-    
-    return cluster_samples
-
-
-def get_naive_consensus_files(wildcards):
-    """
-    Get list of naive consensus FASTA files for samples that passed alignment.
-    """
-    passing = get_aligned_samples(wildcards)
-    return [str(NAIVE_CONSENSUS_DIR / f"{sample}.fasta") for sample in passing]
-
-
-def get_multi_consensus_dirs(wildcards):
-    """
-    Get list of multi-consensus output directories for all passing samples.
-    Each sample has its own subdirectory that may contain multiple cluster files.
-    """
-    passing = get_aligned_samples(wildcards)
-    return [str(MULTI_CONSENSUS_DIR / sample) for sample in passing]
-
-
-def get_cluster_fastqs_for_sample(wildcards):
-    """
-    Get list of cluster FASTQ files for a sample after split_reads checkpoint.
-    
-    Returns either:
-    - [sample.fastq] if no clusters detected
-    - [sample_A.fastq, sample_B.fastq, ...] if clusters detected
-    """
-    checkpoint_output = checkpoints.split_reads.get(**wildcards).output.outdir
-    split_dir = Path(checkpoint_output)
-    
-    # Find all FASTQ files in the split directory
-    fastq_files = list(split_dir.glob("*.fastq"))
-    
-    return [str(f) for f in sorted(fastq_files)]
-
-
-def get_all_cluster_fastqs(wildcards):
-    """
-    Get all cluster FASTQ files for all passing samples.
-    
-    Used by aggregation rules that need to process all clusters.
-    """
-    passing = get_aligned_samples(wildcards)
-    all_fastqs = []
-    
-    for sample in passing:
-        # Get cluster FASTQs for this sample
-        sample_wildcards = type('obj', (object,), {'sample': sample})
-        fastqs = get_cluster_fastqs_for_sample(sample_wildcards)
-        all_fastqs.extend(fastqs)
-    
-    return all_fastqs
-
-
-def get_all_cluster_consensus_files(wildcards):
-    """
-    Get all cluster consensus files for all passing samples.
-    
-    For each sample, discovers which clusters exist and returns
-    the corresponding consensus file paths.
-    """
-    passing = get_aligned_samples(wildcards)
-    all_consensus = []
-    
-    for sample in passing:
-        # Get split reads checkpoint output for this sample
-        checkpoint_output = checkpoints.split_reads.get(sample=sample).output.outdir
-        split_dir = Path(checkpoint_output)
-        
-        # Find all FASTQ files to determine cluster names
-        fastq_files = list(split_dir.glob("*.fastq"))
-        
-        # Generate consensus file paths for each cluster
-        for fastq in sorted(fastq_files):
-            cluster_name = fastq.stem  # Remove .fastq extension
-            consensus_file = CLUSTER_CONSENSUS_DIR / sample / f"{cluster_name}.fasta"
-            all_consensus.append(str(consensus_file))
-    
-    return all_consensus
-
-
 def get_input_fastq(wildcards):
-
     """
     Get the input FASTQ file path for a sample.
     
@@ -303,6 +162,54 @@ def get_input_fastq(wildcards):
     
     # If neither exists, return .fastq (will trigger error in rule)
     return str(fastq_path)
+
+
+# Wrapper functions for checkpoint helpers
+def get_passing_samples(wildcards):
+    """Get samples that passed initial read count checkpoint."""
+    checkpoint_output = checkpoints.check_min_reads.get(**wildcards).output.passing
+    return _get_passing_samples(checkpoints, checkpoint_output)
+
+
+def get_filtered_fastq_files(wildcards):
+    """Get filtered FASTQ files for samples that passed checkpoint."""
+    return _get_filtered_fastq_files(checkpoints, wildcards, FILTER_DIR)
+
+
+def get_aligned_samples(wildcards):
+    """Get samples that passed post-filter checkpoint."""
+    checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
+    return _get_aligned_samples(checkpoints, checkpoint_output)
+
+
+def get_cluster_samples(wildcards):
+    """Get samples that have cluster alignments."""
+    return _get_cluster_samples(checkpoints, wildcards, CLUSTER_ALIGNMENT_DIR)
+
+
+def get_naive_consensus_files(wildcards):
+    """Get naive consensus FASTA files for aligned samples."""
+    return _get_naive_consensus_files(checkpoints, wildcards, NAIVE_CONSENSUS_DIR)
+
+
+def get_multi_consensus_dirs(wildcards):
+    """Get multi-consensus output directories for all passing samples."""
+    return _get_multi_consensus_dirs(checkpoints, wildcards, MULTI_CONSENSUS_DIR)
+
+
+def get_cluster_fastqs_for_sample(wildcards):
+    """Get cluster FASTQ files for a sample after split_reads checkpoint."""
+    return _get_cluster_fastqs_for_sample(checkpoints, wildcards)
+
+
+def get_all_cluster_fastqs(wildcards):
+    """Get all cluster FASTQ files for all passing samples."""
+    return _get_all_cluster_fastqs(checkpoints, wildcards)
+
+
+def get_all_cluster_consensus_files(wildcards):
+    """Get all cluster consensus files for all passing samples."""
+    return _get_all_cluster_consensus_files(checkpoints, wildcards, CLUSTER_CONSENSUS_DIR)
 
 
 # ==================== Initialize ====================
