@@ -14,16 +14,6 @@ outdir: "demo/demo_output"
 naive_database_filename: "naive_db.fasta"
 multi_database_filename: "multi_db.fasta"
 
-# Pairwise edit distance report
-pairwise_distance:
-  # Number of bp to ignore at start of sequences when calculating distances
-  # (reduces noise from alignment artifacts at sequence ends)
-  ignore_first_n_bp: 0
-  
-  # Number of bp to ignore at end of sequences when calculating distances
-  ignore_last_n_bp: 0
-
-
 # ==================== Quality Control ====================
 
 # Minimum number of reads required per sample (before filtering)
@@ -34,6 +24,14 @@ min_reads_initial: 10
 # Samples with fewer reads will be excluded from alignment
 min_reads_filtered: 5
 
+# Pairwise edit distance report
+pairwise_distance:
+  # Number of bp to ignore at start of sequences when calculating distances
+  # (reduces noise from alignment artifacts at sequence ends)
+  ignore_first_n_bp: 0
+  
+  # Number of bp to ignore at end of sequences when calculating distances
+  ignore_last_n_bp: 0
 
 # ==================== Filtering (NanoFilt) ====================
 
@@ -86,7 +84,7 @@ cluster_alignment:
 multi_alignment:
   # MAFFT algorithm for final multi-consensus alignment
   # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
-  mafft_algorithm: "ginsi"
+  mafft_algorithm: "default"
   # Gap opening penalty (0 = use MAFFT defaults)
   gap_open: 0
   # Gap extension penalty (0 = use MAFFT defaults)
@@ -107,7 +105,7 @@ multi_consensus:
 
   # Number of bp to ignore at start and end of alignment when detecting clusters
   # (reduces noise from alignment artifacts at ends)
-  trim_bp: 0
+  trim_bp: 70
 
   # Minimum proportion for majority agreement at a position (0.8 = 80%)
   # Positions below this threshold are used for clustering
