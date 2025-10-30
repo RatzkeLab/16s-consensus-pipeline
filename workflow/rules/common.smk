@@ -59,6 +59,8 @@ NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.
 MULTI_DATABASE_FILE = OUT_DIR / config.get("multi_database_filename", "multi_db.fasta")
 PAIRWISE_DISTANCE_FILE = OUT_DIR / config.get("pairwise_distance_filename", "pairwise_distances.tsv")
 MULTI_ALIGNMENT_FILE = OUT_DIR / config.get("multi_alignment_filename", "all_consensus_alignment.fasta")
+PAIRWISE_DISTANCE_MATRIX_FILE = OUT_DIR / config.get("pairwise_distance_matrix_filename", "pairwise_distance_matrix.tsv")
+PAIRWISE_DISTANCE_HEATMAP_FILE = OUT_DIR / config.get("pairwise_distance_heatmap_filename", "pairwise_distance_heatmap.png")
 
 # Pairwise distance parameters
 PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP = config.get("pairwise_distance", {}).get("ignore_first_n_bp", 70)

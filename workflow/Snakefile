@@ -30,7 +30,7 @@ rule all:
         NAIVE_DATABASE_FILE,
         MULTI_DATABASE_FILE,
         # Analysis outputs
-        PAIRWISE_DISTANCE_FILE,
+        PAIRWISE_DISTANCE_HEATMAP_FILE,
         MULTI_ALIGNMENT_FILE,
         # Summary report
         OUT_DIR / "pipeline_summary.md"

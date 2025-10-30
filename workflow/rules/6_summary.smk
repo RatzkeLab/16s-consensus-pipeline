@@ -36,6 +36,26 @@ rule pairwise_edit_distance:
         "../scripts/pairwise_distances.py"
 
 
+rule pairwise_distance_heatmap:
+    """
+    Build a symmetric distance matrix from pairwise TSV, cluster it, and plot a heatmap.
+    
+    Upstream: pairwise_edit_distance
+    Downstream: None (analysis output)
+    """
+    input:
+        distances = PAIRWISE_DISTANCE_FILE
+    output:
+        matrix = PAIRWISE_DISTANCE_MATRIX_FILE,
+        heatmap = PAIRWISE_DISTANCE_HEATMAP_FILE
+    conda:
+        "../envs/qc.yaml"
+    log:
+        LOG_DIR / "summary" / "pairwise_heatmap.log"
+    script:
+        "../scripts/distance_heatmap.py"
+
+
 rule multi_align_consensus:
     """
     Create multi-alignment of all consensus sequences using MAFFT.
