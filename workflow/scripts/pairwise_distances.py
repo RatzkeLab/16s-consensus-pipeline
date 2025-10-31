@@ -34,6 +34,48 @@ def parse_fasta(fasta_path):
     return sequences
 
 
+def calculate_auto_trim(sequences):
+    """Calculate auto-trim values based on longest leading/trailing gaps.
+    
+    Returns the position of the first non-gap character in the sequence with
+    the longest leading gap, and the position of the last non-gap character
+    in the sequence with the longest trailing gap.
+    
+    Args:
+        sequences: Dictionary of sequences (may be aligned or not)
+    
+    Returns:
+        tuple: (trim_start, trim_end) - number of positions to trim from start and end
+    """
+    if not sequences:
+        return 0, 0
+    
+    max_leading_gaps = 0
+    max_trailing_gaps = 0
+    
+    for seq in sequences.values():
+        # Count leading gaps
+        leading = 0
+        for char in seq:
+            if char == '-':
+                leading += 1
+            else:
+                break
+        
+        # Count trailing gaps
+        trailing = 0
+        for char in reversed(seq):
+            if char == '-':
+                trailing += 1
+            else:
+                break
+        
+        max_leading_gaps = max(max_leading_gaps, leading)
+        max_trailing_gaps = max(max_trailing_gaps, trailing)
+    
+    return max_leading_gaps, max_trailing_gaps
+
+
 def edit_distance(s1, s2):
     """Calculate Levenshtein edit distance between two strings."""
     m, n = len(s1), len(s2)
@@ -89,15 +131,27 @@ def main():
     output_tsv = snakemake.output.distances
     ignore_first_n_bp = snakemake.params.ignore_first_n_bp
     ignore_last_n_bp = snakemake.params.ignore_last_n_bp
+    auto_trim = snakemake.params.auto_trim
     
     # Parse sequences
     sequences = parse_fasta(input_fasta)
     
-    # Trim sequences
-    if ignore_first_n_bp > 0 or ignore_last_n_bp > 0:
-        print(f"Trimming sequences: ignoring first {ignore_first_n_bp} bp and last {ignore_last_n_bp} bp",
+    # Determine trim values
+    if auto_trim:
+        trim_start, trim_end = calculate_auto_trim(sequences)
+        print(f"Auto-trim enabled: ignoring first {trim_start} bp and last {trim_end} bp "
+              f"(based on longest leading/trailing gaps)",
               file=sys.stderr)
-        sequences = trim_sequences(sequences, ignore_first_n_bp, ignore_last_n_bp)
+    else:
+        trim_start = ignore_first_n_bp
+        trim_end = ignore_last_n_bp
+        if trim_start > 0 or trim_end > 0:
+            print(f"Manual trim: ignoring first {trim_start} bp and last {trim_end} bp",
+                  file=sys.stderr)
+    
+    # Trim sequences
+    if trim_start > 0 or trim_end > 0:
+        sequences = trim_sequences(sequences, trim_start, trim_end)
     
     seq_names = list(sequences.keys())
     

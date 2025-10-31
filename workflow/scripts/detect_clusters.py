@@ -40,13 +40,56 @@ def read_fasta(path):
     return seqs
 
 
-def identify_variable_positions(seqs, min_agreement, trim_bp=70):
+def calculate_auto_trim(seqs):
+    """Calculate auto-trim values based on longest leading/trailing gaps.
+    
+    Returns the position of the first non-gap character in the sequence with
+    the longest leading gap, and the position of the last non-gap character
+    in the sequence with the longest trailing gap.
+    
+    Args:
+        seqs: Dictionary of sequences (aligned)
+    
+    Returns:
+        tuple: (trim_start, trim_end) - number of positions to trim from start and end
+    """
+    if not seqs:
+        return 0, 0
+    
+    max_leading_gaps = 0
+    max_trailing_gaps = 0
+    
+    for seq in seqs.values():
+        # Count leading gaps
+        leading = 0
+        for char in seq:
+            if char == '-':
+                leading += 1
+            else:
+                break
+        
+        # Count trailing gaps
+        trailing = 0
+        for char in reversed(seq):
+            if char == '-':
+                trailing += 1
+            else:
+                break
+        
+        max_leading_gaps = max(max_leading_gaps, leading)
+        max_trailing_gaps = max(max_trailing_gaps, trailing)
+    
+    return max_leading_gaps, max_trailing_gaps
+
+
+def identify_variable_positions(seqs, min_agreement, trim_bp=70, auto_trim=False):
     """Identify positions where consensus is below threshold.
     
     Args:
         seqs: Dictionary of sequences
         min_agreement: Maximum agreement threshold for variable positions
         trim_bp: Number of bp to ignore at start and end of alignment (default: 70)
+        auto_trim: If True, automatically calculate trim values based on alignment gaps
     """
     if not seqs:
         return []
@@ -54,12 +97,21 @@ def identify_variable_positions(seqs, min_agreement, trim_bp=70):
     aln_len = len(list(seqs.values())[0])
     variable_positions = []
     
-    # Define the region to analyze (excluding first and last trim_bp)
-    start_pos = trim_bp
-    end_pos = aln_len - trim_bp
+    # Calculate trim values
+    if auto_trim:
+        trim_start, trim_end = calculate_auto_trim(seqs)
+        sys.stderr.write(f"Auto-trim enabled: ignoring first {trim_start} bp and last {trim_end} bp "
+                        f"(based on longest leading/trailing gaps)\n")
+    else:
+        trim_start = trim_bp
+        trim_end = trim_bp
+        sys.stderr.write(f"Manual trim: ignoring first {trim_start} bp and last {trim_end} bp\n")
     
-    sys.stderr.write(f"Analyzing positions {start_pos} to {end_pos} "
-                    f"(ignoring first/last {trim_bp} bp)\n")
+    # Define the region to analyze (excluding trimmed regions)
+    start_pos = trim_start
+    end_pos = aln_len - trim_end
+    
+    sys.stderr.write(f"Analyzing positions {start_pos} to {end_pos}\n")
     
     for pos in range(start_pos, end_pos):
         column = [seq[pos] for seq in seqs.values()]
@@ -161,6 +213,8 @@ def main():
                         help="Minimum number of variable positions required to attempt clustering")
     parser.add_argument("--trim_bp", type=int, default=70,
                         help="Number of bp to ignore at start and end of alignment")
+    parser.add_argument("--auto_trim", action="store_true",
+                        help="Automatically calculate trim values based on longest leading/trailing gaps")
     
     args = parser.parse_args()
     
@@ -181,7 +235,9 @@ def main():
         return
     
     # Identify variable positions
-    variable_positions = identify_variable_positions(seqs, args.min_agreement, args.trim_bp)
+    variable_positions = identify_variable_positions(
+        seqs, args.min_agreement, args.trim_bp, args.auto_trim
+    )
     sys.stderr.write(f"Found {len(variable_positions)} variable positions\n")
     
     if len(variable_positions) < args.min_variable_positions:

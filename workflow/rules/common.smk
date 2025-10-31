@@ -53,6 +53,8 @@ MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT = config.get("multi_consensus", {}).get
 MULTI_CONSENSUS_MAX_CLUSTERS = config.get("multi_consensus", {}).get("max_clusters", 10)
 MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS = config.get("multi_consensus", {}).get("min_variable_positions", 3)
 MULTI_CONSENSUS_TRIM_BP = config.get("multi_consensus", {}).get("trim_bp", 70)
+MULTI_CONSENSUS_AUTO_TRIM = config.get("multi_consensus", {}).get("auto_trim", True)
+MULTI_CONSENSUS_AUTO_TRIM_FLAG = "--auto_trim" if MULTI_CONSENSUS_AUTO_TRIM else ""
 
 # Final outputs
 NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
@@ -65,6 +67,7 @@ PAIRWISE_DISTANCE_HEATMAP_FILE = OUT_DIR / config.get("pairwise_distance_heatmap
 # Pairwise distance parameters
 PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP = config.get("pairwise_distance", {}).get("ignore_first_n_bp", 70)
 PAIRWISE_DISTANCE_IGNORE_LAST_N_BP = config.get("pairwise_distance", {}).get("ignore_last_n_bp", 70)
+PAIRWISE_DISTANCE_AUTO_TRIM = config.get("pairwise_distance", {}).get("auto_trim", False)
 
 # NanoFilt parameters
 NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)

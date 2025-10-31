@@ -42,7 +42,8 @@ rule detect_clusters:
         min_cluster_size_percent=MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters=MULTI_CONSENSUS_MAX_CLUSTERS,
         min_variable_positions=MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS,
-        trim_bp=MULTI_CONSENSUS_TRIM_BP
+        trim_bp=MULTI_CONSENSUS_TRIM_BP,
+        auto_trim_flag=MULTI_CONSENSUS_AUTO_TRIM_FLAG,
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
     conda:
@@ -59,6 +60,7 @@ rule detect_clusters:
           --max_clusters {params.max_clusters} \
           --min_variable_positions {params.min_variable_positions} \
           --trim_bp {params.trim_bp} \
+          {params.auto_trim_flag} \
           2> {log}
         """
 
