@@ -86,6 +86,46 @@ def calculate_auto_trim(seqs):
     return max_leading_gaps, max_trailing_gaps
 
 
+def compress_gap_runs(seqs):
+    """Compress gap runs by marking continuation gaps with 'N'.
+    
+    Replaces all gaps after the first in each consecutive gap run with 'N'.
+    This reduces the weight of long gaps in distance calculations while still
+    penalizing the gap event itself.
+    
+    Example: 'A---T' becomes 'A-NNT'
+    
+    Args:
+        seqs: Dictionary of {header: sequence}
+    
+    Returns:
+        Dictionary of {header: modified_sequence}
+    """
+    compressed = {}
+    
+    for header, seq in seqs.items():
+        new_seq = []
+        in_gap_run = False
+        
+        for char in seq:
+            if char == '-':
+                if in_gap_run:
+                    # This is a continuation gap, mark with N
+                    new_seq.append('N')
+                else:
+                    # This is the first gap in a run, keep it
+                    new_seq.append('-')
+                    in_gap_run = True
+            else:
+                # Non-gap character, reset gap run flag
+                new_seq.append(char)
+                in_gap_run = False
+        
+        compressed[header] = ''.join(new_seq)
+    
+    return compressed
+
+
 def identify_variable_positions(seqs, min_agreement, trim_bp=70, auto_trim=False):
     """Identify positions where consensus is below threshold.
     
@@ -141,8 +181,23 @@ def create_read_profiles(seqs, variable_positions):
 
 
 def hamming_distance(profile1, profile2):
-    """Calculate Hamming distance between two profiles."""
-    return sum(c1 != c2 for c1, c2 in zip(profile1, profile2))
+        """Calculate Hamming-like distance between two profiles.
+
+        Rules:
+        - 'N' is treated as neutral (wildcard) and does not contribute to distance
+            when present on either side.
+        - All other characters are compared directly; mismatch counts as 1.
+        - Gaps ('-') are penalized only for the first position of a gap run when
+            used together with compress_gap_runs() which marks continuation gaps as 'N'.
+        """
+        dist = 0
+        for c1, c2 in zip(profile1, profile2):
+                # Ignore positions where either side is neutral
+                if c1 == 'N' or c2 == 'N':
+                        continue
+                if c1 != c2:
+                        dist += 1
+        return dist
 
 
 def hierarchical_cluster(profiles, max_clusters=10):
@@ -290,6 +345,8 @@ def main():
                         help="Number of bp to ignore at start and end of alignment")
     parser.add_argument("--auto_trim", action="store_true",
                         help="Automatically calculate trim values based on longest leading/trailing gaps")
+    parser.add_argument("--compress_gaps", action="store_true",
+                        help="Compress gap runs by marking continuation gaps (reduces weight of long gaps)")
     
     args = parser.parse_args()
     
@@ -308,6 +365,11 @@ def main():
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - single cluster\n")
         return
+    
+    # Compress gap runs if requested
+    if args.compress_gaps:
+        sys.stderr.write("Compressing gap runs (marking continuation gaps with 'N')\n")
+        seqs = compress_gap_runs(seqs)
     
     # Identify variable positions
     variable_positions = identify_variable_positions(
