@@ -119,6 +119,11 @@ multi_consensus:
   # Only used if auto_trim is false
   trim_bp: 70
 
+  # Compress gap runs when creating profiles for clustering
+  # Marks continuation gaps with 'N' to reduce weight of long gaps
+  # (reduces impact of Nanopore skipping artifacts while still penalizing gap events)
+  compress_gaps: false
+
   # Minimum proportion for majority agreement at a position (0.8 = 80%)
   # Positions below this threshold are used for clustering
   min_agreement: 0.8

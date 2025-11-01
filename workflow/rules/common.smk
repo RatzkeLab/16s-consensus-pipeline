@@ -55,6 +55,8 @@ MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS = config.get("multi_consensus", {}).get("
 MULTI_CONSENSUS_TRIM_BP = config.get("multi_consensus", {}).get("trim_bp", 70)
 MULTI_CONSENSUS_AUTO_TRIM = config.get("multi_consensus", {}).get("auto_trim", True)
 MULTI_CONSENSUS_AUTO_TRIM_FLAG = "--auto_trim" if MULTI_CONSENSUS_AUTO_TRIM else ""
+MULTI_CONSENSUS_COMPRESS_GAPS = config.get("multi_consensus", {}).get("compress_gaps", False)
+MULTI_CONSENSUS_COMPRESS_GAPS_FLAG = "--compress_gaps" if MULTI_CONSENSUS_COMPRESS_GAPS else ""
 
 # Final outputs
 NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
