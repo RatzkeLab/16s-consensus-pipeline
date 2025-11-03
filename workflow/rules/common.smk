@@ -141,7 +141,7 @@ def _build_mafft_flags(algorithm, gap_open=0, gap_extend=0):
     Helper to build MAFFT flags from algorithm choice and gap penalties.
     
     Args:
-        algorithm: Algorithm choice ("auto", "ginsi", or "default"/"")
+        algorithm: Algorithm choice ("auto", "ginsi", or "default" or "")
         gap_open: Gap opening penalty (0 = use MAFFT defaults)
         gap_extend: Gap extension penalty (0 = use MAFFT defaults)
     
