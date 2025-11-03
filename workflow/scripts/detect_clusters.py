@@ -390,6 +390,18 @@ def main():
     # Create profiles
     profiles = create_read_profiles(seqs, variable_positions)
     
+    # Write read profiles to TSV
+    with open(outdir / "read_profiles.tsv", "w") as f:
+        # Header: read_id, then each variable position
+        f.write("read_id\t" + "\t".join(f"pos_{p}" for p in variable_positions) + "\n")
+        
+        # Each read's profile
+        for read_id in sorted(profiles.keys()):
+            profile = profiles[read_id]
+            f.write(f"{read_id}\t" + "\t".join(profile) + "\n")
+    
+    sys.stderr.write(f"Wrote read profiles to read_profiles.tsv\n")
+    
     # Cluster reads
     clusters, linkage_matrix, dist_matrix = hierarchical_cluster(profiles, max_clusters=args.max_clusters)
     sys.stderr.write(f"Found {len(clusters)} clusters\n")
