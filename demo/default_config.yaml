@@ -14,11 +14,12 @@ outdir: "demo/demo_output"
 naive_database_filename: "naive_db.fasta"
 multi_database_filename: "multi_db.fasta"
 
+## ==================== Output Report ====================
 # Pairwise edit distance report
 pairwise_distance:
   # Automatically calculate trim values based on longest leading/trailing gaps
   # If true, ignore_first_n_bp and ignore_last_n_bp are ignored
-  auto_trim: false
+  auto_trim: true
   
   # Number of bp to ignore at start of sequences when calculating distances
   # (reduces noise from alignment artifacts at sequence ends)
