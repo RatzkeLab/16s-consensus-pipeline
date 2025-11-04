@@ -9,6 +9,10 @@ between every pair of sequences, outputting a TSV matrix.
 import sys
 from pathlib import Path
 
+# Import common helper
+sys.path.insert(0, str(Path(__file__).parent))
+from common_helpers import calculate_auto_trim
+
 
 def parse_fasta(fasta_path):
     """Parse FASTA file and return dict of {header: sequence}."""
@@ -32,48 +36,6 @@ def parse_fasta(fasta_path):
             sequences[current_header] = "".join(current_seq)
     
     return sequences
-
-
-def calculate_auto_trim(sequences):
-    """Calculate auto-trim values based on longest leading/trailing gaps.
-    
-    Returns the position of the first non-gap character in the sequence with
-    the longest leading gap, and the position of the last non-gap character
-    in the sequence with the longest trailing gap.
-    
-    Args:
-        sequences: Dictionary of sequences (may be aligned or not)
-    
-    Returns:
-        tuple: (trim_start, trim_end) - number of positions to trim from start and end
-    """
-    if not sequences:
-        return 0, 0
-    
-    max_leading_gaps = 0
-    max_trailing_gaps = 0
-    
-    for seq in sequences.values():
-        # Count leading gaps
-        leading = 0
-        for char in seq:
-            if char == '-':
-                leading += 1
-            else:
-                break
-        
-        # Count trailing gaps
-        trailing = 0
-        for char in reversed(seq):
-            if char == '-':
-                trailing += 1
-            else:
-                break
-        
-        max_leading_gaps = max(max_leading_gaps, leading)
-        max_trailing_gaps = max(max_trailing_gaps, trailing)
-    
-    return max_leading_gaps, max_trailing_gaps
 
 
 def edit_distance(s1, s2):

@@ -21,6 +21,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.cluster.hierarchy import linkage, fcluster
 
+# Import common helper
+sys.path.insert(0, str(Path(__file__).parent))
+from common_helpers import calculate_auto_trim
+
 
 def read_fasta(path):
     """Read FASTA alignment and return dict of {header: sequence}."""
@@ -42,48 +46,6 @@ def read_fasta(path):
         if header is not None:
             seqs[header] = "".join(seq_buf).upper()
     return seqs
-
-
-def calculate_auto_trim(seqs):
-    """Calculate auto-trim values based on longest leading/trailing gaps.
-    
-    Returns the position of the first non-gap character in the sequence with
-    the longest leading gap, and the position of the last non-gap character
-    in the sequence with the longest trailing gap.
-    
-    Args:
-        seqs: Dictionary of sequences (aligned)
-    
-    Returns:
-        tuple: (trim_start, trim_end) - number of positions to trim from start and end
-    """
-    if not seqs:
-        return 0, 0
-    
-    max_leading_gaps = 0
-    max_trailing_gaps = 0
-    
-    for seq in seqs.values():
-        # Count leading gaps
-        leading = 0
-        for char in seq:
-            if char == '-':
-                leading += 1
-            else:
-                break
-        
-        # Count trailing gaps
-        trailing = 0
-        for char in reversed(seq):
-            if char == '-':
-                trailing += 1
-            else:
-                break
-        
-        max_leading_gaps = max(max_leading_gaps, leading)
-        max_trailing_gaps = max(max_trailing_gaps, trailing)
-    
-    return max_leading_gaps, max_trailing_gaps
 
 
 def compress_gap_runs(seqs):
