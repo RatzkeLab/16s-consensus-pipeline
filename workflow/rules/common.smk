@@ -38,6 +38,7 @@ CLUSTER_DETECTION_DIR = OUT_DIR / "05_cluster_detection"
 SPLIT_READS_DIR = OUT_DIR / "06_split_reads"
 CLUSTER_ALIGNMENT_DIR = OUT_DIR / "07_cluster_alignments"
 CLUSTER_CONSENSUS_DIR = OUT_DIR / "08_cluster_consensus"
+QC_DIR = OUT_DIR / "09_qc"
 LOG_DIR = OUT_DIR / "logs"
 
 # Thresholds and parameters
@@ -47,6 +48,15 @@ SUBSAMPLE_N = config.get("subsample_n", 150)
 # Deterministic subsampling seed (seqtk -s). Allows reproducible subsampling.
 # Read from config.subsample.seed if provided, else defaults to 42.
 SUBSAMPLE_SEED = config.get("subsample", {}).get("seed", 42)
+
+# NanoFilt parameters
+NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)
+NANOFILT_MIN_LENGTH = config.get("filter", {}).get("min_length", 1300)
+NANOFILT_MAX_LENGTH = config.get("filter", {}).get("max_length", 1700)
+HEADCROP = config.get("filter", {}).get("headcrop", 0)
+TAILCROP = config.get("filter", {}).get("tailcrop", 0)
+
+# Parameters for Consensus Making
 NAIVE_CONSENSUS_MIN_PROP = config.get("naive_consensus", {}).get("min_consensus_proportion", 0.6)
 # For multi-consensus, default to the naive value, or 0.6 if neither is set
 MULTI_CONSENSUS_MIN_PROP = config.get("multi_consensus", {}).get(
@@ -64,25 +74,18 @@ MULTI_CONSENSUS_AUTO_TRIM_FLAG = "--auto_trim" if MULTI_CONSENSUS_AUTO_TRIM else
 MULTI_CONSENSUS_COMPRESS_GAPS = config.get("multi_consensus", {}).get("compress_gaps", False)
 MULTI_CONSENSUS_COMPRESS_GAPS_FLAG = "--compress_gaps" if MULTI_CONSENSUS_COMPRESS_GAPS else ""
 
-# Final outputs
-NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
-MULTI_DATABASE_FILE = OUT_DIR / config.get("multi_database_filename", "multi_db.fasta")
-PAIRWISE_DISTANCE_FILE = OUT_DIR / config.get("pairwise_distance_filename", "pairwise_distances.tsv")
-MULTI_ALIGNMENT_FILE = OUT_DIR / config.get("multi_alignment_filename", "all_consensus_alignment.fasta")
-PAIRWISE_DISTANCE_MATRIX_FILE = OUT_DIR / config.get("pairwise_distance_matrix_filename", "pairwise_distance_matrix.tsv")
-PAIRWISE_DISTANCE_HEATMAP_FILE = OUT_DIR / config.get("pairwise_distance_heatmap_filename", "pairwise_distance_heatmap.png")
-
 # Pairwise distance parameters
 PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP = config.get("pairwise_distance", {}).get("ignore_first_n_bp", 70)
 PAIRWISE_DISTANCE_IGNORE_LAST_N_BP = config.get("pairwise_distance", {}).get("ignore_last_n_bp", 70)
 PAIRWISE_DISTANCE_AUTO_TRIM = config.get("pairwise_distance", {}).get("auto_trim", False)
 
-# NanoFilt parameters
-NANOFILT_MIN_QUALITY = config.get("filter", {}).get("min_avg_qscore", 10)
-NANOFILT_MIN_LENGTH = config.get("filter", {}).get("min_length", 1300)
-NANOFILT_MAX_LENGTH = config.get("filter", {}).get("max_length", 1700)
-HEADCROP = config.get("filter", {}).get("headcrop", 0)
-TAILCROP = config.get("filter", {}).get("tailcrop", 0)
+# Final outputs
+NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
+MULTI_DATABASE_FILE = OUT_DIR / config.get("multi_database_filename", "multi_db.fasta")
+PAIRWISE_DISTANCE_FILE = QC_DIR / config.get("pairwise_distance_filename", "pairwise_distances.tsv")
+MULTI_ALIGNMENT_FILE = QC_DIR / config.get("multi_alignment_filename", "all_consensus_alignment.fasta")
+PAIRWISE_DISTANCE_MATRIX_FILE = QC_DIR / config.get("pairwise_distance_matrix_filename", "pairwise_distance_matrix.tsv")
+PAIRWISE_DISTANCE_HEATMAP_FILE = QC_DIR / config.get("pairwise_distance_heatmap_filename", "pairwise_distance_heatmap.png")
 
 # ==================== Helper Functions (Wrappers) ====================
 # See common_helpers.py for base functions
