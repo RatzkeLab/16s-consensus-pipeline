@@ -13,7 +13,7 @@ bash Miniforge3-$(uname)-$(uname -m).sh
 
 ### 2. Create Snakemake Environment
 ```bash
-conda create -n snakemake_env -c conda-forge -c bioconda snakemake=9
+conda create -n snakemake_env -c conda-forge -c bioconda snakemake
 conda activate snakemake_env
 ```
 
@@ -36,16 +36,16 @@ cp demo/default_config.yaml my_config.yaml
 nano my_config.yaml
 
 # 3. Run pipeline
-snakemake -c 8 --use-conda --configfile my_config.yaml
+snakemake -c 8 --use-conda --configfile path/to/your/config/my_config.yaml
 ```
 
 ### Configuration Options
 
-Key parameters in `demo/default_config.yaml`:
+Key parameters that should be modified in your config:
 
 ```yaml
-input_dir: "demo/merged"              # Input FASTQ directory
-output_dir: "demo/demo_output"        # Output directory
+input_dir: "path/to/your/fastq/folder"              # Input FASTQ directory
+output_dir: "path/to/wherever/you/want/your/output/to/be/saved"        # Output directory
 run_name: "demo"                      # Database filename prefix
 
 min_reads_initial: 10                 # Min reads before filtering
@@ -59,7 +59,7 @@ filter:
 subsample_n: 150                      # Reads per sample for alignment
 
 consensus:
-  min_consensus_proportion: 0.6       # 60% threshold for consensus
+  min_consensus_proportion: 0.6       # 60% threshold for adding a locus to the error profile
 ```
 
 ## Pipeline Steps
@@ -76,54 +76,16 @@ consensus:
 
 ## Outputs
 
-```
-output_dir/
-  naive_db.fasta              # Naive consensus database (winner-takes-all)
-  multi_db.fasta              # Multi-consensus database (with clustering)
-  pipeline_summary.md         # QC report
-  filtered/                   # Filtered FASTQs
-  subsampled/                 # Subsampled FASTQs
-  alignment/                  # Per-sample MSAs
-  naive_consensus/            # Per-sample naive consensus FASTAs
-  multi_consensus/            # Per-sample multi-consensus FASTAs (may have A, B, C variants)
-  checks/                     # QC checkpoint files
-  logs/                       # Per-sample logs
-```
+Outputs are generated along the way at each step, and can be used to sanity check the performance of the pipeline on your data.
+
+The key final outputs are 
+ - naive_db.fasta, which contains 1 consensus sequence per sample
+ - multi_db.fasta, which contains multiple consensus sequences per sample, if multiple consensuses are detected.
 
 ## Advanced Usage
 
-**Visualize cluster separation (optional):**
-```bash
-conda activate snakemake_env
-snakemake visualize -c 4 --use-conda
-# Creates cluster_alignments/ with per-cluster alignment files
-```
-
 **Clean outputs and re-run:**
 ```bash
 snakemake --delete-all-output
 snakemake -c 4 --use-conda
-```
-
-**View summary report:**
-```bash
-cat output_dir/pipeline_summary.md
-```
-
-## Troubleshooting
-
-**Dry-run to check workflow:**
-```bash
-snakemake -n
-```
-
-**Clean outputs and re-run:**
-```bash
-snakemake --delete-all-output
-snakemake -c 4 --use-conda
-```
-
-**Check which samples failed QC:**
-```bash
-cat output_dir/pipeline_summary.md
 ```
