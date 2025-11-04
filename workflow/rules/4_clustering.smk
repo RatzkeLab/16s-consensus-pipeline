@@ -36,10 +36,10 @@ rule generate_profiles:
     output:
         profile_tsv=PROFILE_DIR / "{sample}.tsv"
     params:
-        min_agreement=MULTI_CONSENSUS_MIN_AGREEMENT,
-        trim_bp=MULTI_CONSENSUS_TRIM_BP,
-        auto_trim_flag=MULTI_CONSENSUS_AUTO_TRIM_FLAG,
-        compress_gaps_flag=MULTI_CONSENSUS_COMPRESS_GAPS_FLAG,
+        min_agreement=CLUSTER_DETECT_PROF_MIN_AGREEMENT,
+        trim_bp=CLUSTER_DETECT_PROF_TRIM_BP,
+        auto_trim_flag=CLUSTER_DETECT_PROF_AUTO_TRIM_FLAG,
+        compress_gaps_flag=CLUSTER_DETECT_PROF_COMPRESS_GAPS_FLAG,
     log:
         LOG_DIR / "generate_profiles" / "{sample}.log"
     conda:

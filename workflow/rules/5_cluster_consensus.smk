@@ -112,10 +112,10 @@ rule profile_cluster_alignment:
     output:
         profile_tsv = CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}.tsv"
     params:
-        min_agreement = MULTI_CONSENSUS_MIN_AGREEMENT,
-        trim_bp = MULTI_CONSENSUS_TRIM_BP,
-        auto_trim_flag = MULTI_CONSENSUS_AUTO_TRIM_FLAG,
-        compress_gaps_flag = MULTI_CONSENSUS_COMPRESS_GAPS_FLAG,
+        min_agreement = CLUSTER_ALIGN_QC_MIN_AGREEMENT,
+        trim_bp = CLUSTER_ALIGN_QC_TRIM_BP,
+        auto_trim_flag = CLUSTER_ALIGN_QC_AUTO_TRIM_FLAG,
+        compress_gaps_flag = CLUSTER_ALIGN_QC_COMPRESS_GAPS_FLAG,
     log:
         LOG_DIR / "profile_cluster_alignment" / "{sample}_{cluster}.log"
     conda:
@@ -150,10 +150,10 @@ rule visualize_cluster_alignment:
     output:
         outdir = directory(CLUSTER_ALIGNMENT_CLUSTER_VIZ_DIR / "{sample}" / "{cluster}")
     params:
-        min_cluster_size = MULTI_CONSENSUS_MIN_CLUSTER_SIZE,
-        min_cluster_size_percent = MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT,
-        max_clusters = MULTI_CONSENSUS_MAX_CLUSTERS,
-        min_variable_positions = MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS,
+        min_cluster_size = CLUSTER_ALIGN_QC_MIN_CLUSTER_SIZE,
+        min_cluster_size_percent = CLUSTER_ALIGN_QC_MIN_CLUSTER_SIZE_PERCENT,
+        max_clusters = CLUSTER_ALIGN_QC_MAX_CLUSTERS,
+        min_variable_positions = CLUSTER_ALIGN_QC_MIN_VARIABLE_POSITIONS,
     log:
         LOG_DIR / "visualize_cluster_alignment" / "{sample}_{cluster}.log"
     conda:

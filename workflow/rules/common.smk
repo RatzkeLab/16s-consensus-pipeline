@@ -78,6 +78,84 @@ MULTI_CONSENSUS_AUTO_TRIM_FLAG = "--auto_trim" if MULTI_CONSENSUS_AUTO_TRIM else
 MULTI_CONSENSUS_COMPRESS_GAPS = config.get("multi_consensus", {}).get("compress_gaps", False)
 MULTI_CONSENSUS_COMPRESS_GAPS_FLAG = "--compress_gaps" if MULTI_CONSENSUS_COMPRESS_GAPS else ""
 
+# Initial per-sample cluster-detection profile generation parameters
+# (used by rule generate_profiles before clustering). Defaults fall back
+# to multi_consensus values for convenience.
+CLUSTER_DETECT_PROF_MIN_AGREEMENT = config.get("cluster_detection_profiles", {}).get(
+    "min_agreement", MULTI_CONSENSUS_MIN_AGREEMENT
+)
+CLUSTER_DETECT_PROF_TRIM_BP = config.get("cluster_detection_profiles", {}).get(
+    "trim_bp", MULTI_CONSENSUS_TRIM_BP
+)
+CLUSTER_DETECT_PROF_AUTO_TRIM = config.get("cluster_detection_profiles", {}).get(
+    "auto_trim", MULTI_CONSENSUS_AUTO_TRIM
+)
+CLUSTER_DETECT_PROF_AUTO_TRIM_FLAG = "--auto_trim" if CLUSTER_DETECT_PROF_AUTO_TRIM else ""
+CLUSTER_DETECT_PROF_COMPRESS_GAPS = config.get("cluster_detection_profiles", {}).get(
+    "compress_gaps", MULTI_CONSENSUS_COMPRESS_GAPS
+)
+CLUSTER_DETECT_PROF_COMPRESS_GAPS_FLAG = "--compress_gaps" if CLUSTER_DETECT_PROF_COMPRESS_GAPS else ""
+
+# Cluster-alignment QC profiling parameters (defaults fall back to multi_consensus)
+CLUSTER_ALIGN_QC_MIN_AGREEMENT = config.get("cluster_alignment_qc", {}).get(
+    "min_agreement", MULTI_CONSENSUS_MIN_AGREEMENT
+)
+CLUSTER_ALIGN_QC_TRIM_BP = config.get("cluster_alignment_qc", {}).get(
+    "trim_bp", MULTI_CONSENSUS_TRIM_BP
+)
+CLUSTER_ALIGN_QC_AUTO_TRIM = config.get("cluster_alignment_qc", {}).get(
+    "auto_trim", MULTI_CONSENSUS_AUTO_TRIM
+)
+CLUSTER_ALIGN_QC_AUTO_TRIM_FLAG = "--auto_trim" if CLUSTER_ALIGN_QC_AUTO_TRIM else ""
+CLUSTER_ALIGN_QC_COMPRESS_GAPS = config.get("cluster_alignment_qc", {}).get(
+    "compress_gaps", MULTI_CONSENSUS_COMPRESS_GAPS
+)
+CLUSTER_ALIGN_QC_COMPRESS_GAPS_FLAG = "--compress_gaps" if CLUSTER_ALIGN_QC_COMPRESS_GAPS else ""
+
+# Cluster-alignment QC visualization clustering parameters
+CLUSTER_ALIGN_QC_MIN_CLUSTER_SIZE = config.get("cluster_alignment_qc", {}).get(
+    "min_cluster_size", MULTI_CONSENSUS_MIN_CLUSTER_SIZE
+)
+CLUSTER_ALIGN_QC_MIN_CLUSTER_SIZE_PERCENT = config.get("cluster_alignment_qc", {}).get(
+    "min_cluster_size_percent", MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT
+)
+CLUSTER_ALIGN_QC_MAX_CLUSTERS = config.get("cluster_alignment_qc", {}).get(
+    "max_clusters", MULTI_CONSENSUS_MAX_CLUSTERS
+)
+CLUSTER_ALIGN_QC_MIN_VARIABLE_POSITIONS = config.get("cluster_alignment_qc", {}).get(
+    "min_variable_positions", MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS
+)
+
+# QC-alignment (all-consensus) profiling parameters (can be different defaults)
+QC_ALIGN_MIN_AGREEMENT = config.get("qc_alignment_qc", {}).get(
+    "min_agreement", MULTI_CONSENSUS_MIN_AGREEMENT
+)
+QC_ALIGN_TRIM_BP = config.get("qc_alignment_qc", {}).get(
+    "trim_bp", MULTI_CONSENSUS_TRIM_BP
+)
+QC_ALIGN_AUTO_TRIM = config.get("qc_alignment_qc", {}).get(
+    "auto_trim", MULTI_CONSENSUS_AUTO_TRIM
+)
+QC_ALIGN_AUTO_TRIM_FLAG = "--auto_trim" if QC_ALIGN_AUTO_TRIM else ""
+QC_ALIGN_COMPRESS_GAPS = config.get("qc_alignment_qc", {}).get(
+    "compress_gaps", MULTI_CONSENSUS_COMPRESS_GAPS
+)
+QC_ALIGN_COMPRESS_GAPS_FLAG = "--compress_gaps" if QC_ALIGN_COMPRESS_GAPS else ""
+
+# QC-alignment visualization clustering parameters (more permissive defaults)
+QC_ALIGN_VIZ_MIN_CLUSTER_SIZE = config.get("qc_alignment_qc", {}).get(
+    "min_cluster_size", 1
+)
+QC_ALIGN_VIZ_MIN_CLUSTER_SIZE_PERCENT = config.get("qc_alignment_qc", {}).get(
+    "min_cluster_size_percent", 0.0
+)
+QC_ALIGN_VIZ_MAX_CLUSTERS = config.get("qc_alignment_qc", {}).get(
+    "max_clusters", 20
+)
+QC_ALIGN_VIZ_MIN_VARIABLE_POSITIONS = config.get("qc_alignment_qc", {}).get(
+    "min_variable_positions", 1
+)
+
 # Pairwise distance parameters
 PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP = config.get("pairwise_distance", {}).get("ignore_first_n_bp", 70)
 PAIRWISE_DISTANCE_IGNORE_LAST_N_BP = config.get("pairwise_distance", {}).get("ignore_last_n_bp", 70)

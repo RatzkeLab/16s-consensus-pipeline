@@ -100,10 +100,10 @@ rule profile_qc_alignment:
     output:
         profile_tsv = QC_ALIGNMENT_PROFILES_DIR / "qc_alignment_profiles.tsv"
     params:
-        min_agreement = MULTI_CONSENSUS_MIN_AGREEMENT,
-        trim_bp = MULTI_CONSENSUS_TRIM_BP,
-        auto_trim_flag = MULTI_CONSENSUS_AUTO_TRIM_FLAG,
-        compress_gaps_flag = MULTI_CONSENSUS_COMPRESS_GAPS_FLAG,
+        min_agreement = QC_ALIGN_MIN_AGREEMENT,
+        trim_bp = QC_ALIGN_TRIM_BP,
+        auto_trim_flag = QC_ALIGN_AUTO_TRIM_FLAG,
+        compress_gaps_flag = QC_ALIGN_COMPRESS_GAPS_FLAG,
     log:
         LOG_DIR / "summary" / "profile_qc_alignment.log"
     conda:
@@ -139,10 +139,10 @@ rule visualize_qc_alignment:
     output:
         outdir = directory(QC_ALIGNMENT_CLUSTER_VIZ_DIR)
     params:
-        min_cluster_size = 1,  # For QC, allow single-sample clusters
-        min_cluster_size_percent = 0.0,
-        max_clusters = 20,  # Allow more clusters since this is cross-sample
-        min_variable_positions = 1,  # Lower threshold for final QC
+        min_cluster_size = QC_ALIGN_VIZ_MIN_CLUSTER_SIZE,  # For QC, allow single-sample clusters
+        min_cluster_size_percent = QC_ALIGN_VIZ_MIN_CLUSTER_SIZE_PERCENT,
+        max_clusters = QC_ALIGN_VIZ_MAX_CLUSTERS,  # Allow more clusters since this is cross-sample
+        min_variable_positions = QC_ALIGN_VIZ_MIN_VARIABLE_POSITIONS,  # Lower threshold for final QC
     log:
         LOG_DIR / "summary" / "visualize_qc_alignment.log"
     conda:
