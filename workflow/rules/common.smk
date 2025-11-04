@@ -139,10 +139,10 @@ NANOFILT_PARAMS = build_nanofilt_params(
     max_length=NANOFILT_MAX_LENGTH
 )
 
-MAFFT_ALIGN_FLAGS = build_mafft_flags(
-    config.get("alignment", {}).get("mafft_algorithm", "default"),
-    config.get("alignment", {}).get("gap_open", 0),
-    config.get("alignment", {}).get("gap_extend", 0)
+MAFFT_INITIAL_ALIGN_FLAGS = build_mafft_flags(
+    config.get("initial_alignment", {}).get("mafft_algorithm", "default"),
+    config.get("initial_alignment", {}).get("gap_open", 0),
+    config.get("initial_alignment", {}).get("gap_extend", 0)
 )
 MAFFT_CLUSTER_ALIGN_FLAGS = build_mafft_flags(
     config.get("cluster_alignment", {}).get("mafft_algorithm", "default"),

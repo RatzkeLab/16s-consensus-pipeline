@@ -7,7 +7,7 @@ sequence per sample without attempting to detect and separate multiple strains:
 2. Pool all naive consensuses into a single database FASTA
 
 Pipeline position: THIRD stage (parallel to clustering.smk)
-Upstream: align.smk (rule align)
+Upstream: 2_align.smk (rule initial_alignment)
 Downstream: summary.smk (rule generate_summary)
 """
 
@@ -17,7 +17,7 @@ rule naive_consensus:
     """
     Generate naive consensus sequence using winner-takes-all approach.
     
-    Upstream: align.smk (rule align)
+    Upstream: 2_align.smk (rule initial_alignment)
     Downstream: rule pool_naive
     
     Positions below threshold are marked with winner base and variants recorded.

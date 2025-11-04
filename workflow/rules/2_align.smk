@@ -1,10 +1,10 @@
 """
-Alignment: subsampling and alignment of filtered reads.
+Initial alignment: subsampling and initial alignment of filtered reads.
 
 1. Subsample reads to a maximum number (optional, for efficiency)
-2. Align reads using MAFFT for multiple sequence alignment
+2. Perform the initial multiple sequence alignment using MAFFT
 
-The alignment output is used by both the naive consensus path and the
+This initial alignment output is used by both the naive consensus path and the
 cluster detection/multi-consensus path.
 
 Pipeline position: SECOND stage
@@ -19,7 +19,7 @@ rule subsample:
     Randomly subsample reads to a maximum number for alignment.
     
     Upstream: preprocessing.smk (checkpoint check_min_reads_filtered)
-    Downstream: rule align
+    Downstream: rule initial_alignment
     
     If sample has fewer reads than subsample_n, uses all reads.
     Subsampling is deterministic (uses configured seed for reproducibility).
@@ -57,7 +57,7 @@ rule subsample:
 
 # ==================== Multiple Sequence Alignment ====================
 
-rule align:
+rule initial_alignment:
     """
     Create multiple sequence alignment per sample using MAFFT.
     
@@ -66,26 +66,26 @@ rule align:
     
     This alignment is used for both pipeline paths:
     - Naive consensus: direct consensus calling from alignment
-    - Multi-consensus: cluster detection followed by per-cluster consensus
+    - Multi-consensus: cluster detection followed by per-cluster realignment and consensus
     """
     input:
         fastq=SUBSAMPLE_DIR / "{sample}.fastq"
     output:
         alignment=ALIGNMENT_DIR / "{sample}.fasta"
     log:
-        LOG_DIR / "align" / "{sample}.log"
+        LOG_DIR / "initial_alignment" / "{sample}.log"
     conda:
         "../envs/align.yaml"
     threads: 4
     params:
-        mafft_flags=MAFFT_ALIGN_FLAGS
+        initial_mafft_flags=MAFFT_INITIAL_ALIGN_FLAGS
     shell:
         """
         mkdir -p "$(dirname {output.alignment})"
         
         # Convert FASTQ to FASTA and align with MAFFT
         awk 'NR%4==1{{print ">"substr($0,2)}} NR%4==2{{print}}' {input.fastq} \
-          | mafft --thread {threads} {params.mafft_flags} - \
+          | mafft --thread {threads} {params.initial_mafft_flags} - \
           > {output.alignment} 2> {log}
         """
 

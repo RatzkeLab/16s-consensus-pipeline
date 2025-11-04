@@ -6,7 +6,7 @@ Cluster detection: detect and split multiple strains/variants within samples.
 3. Realign each cluster separately for improved accuracy
 
 Pipeline position: FOURTH stage (parallel to naive_consensus.smk)
-Upstream: align.smk (rule align)
+Upstream: 2_align.smk (rule initial_alignment)
 Downstream: multi_consensus.smk (rule cluster_consensus)
 """
 
@@ -16,7 +16,7 @@ rule detect_clusters:
     """
     Detect if sample contains obvious subclusters.
     
-    Upstream: align.smk (rule align)
+    Upstream: 2_align.smk (rule initial_alignment)
     Downstream: checkpoint split_reads
     
     Analyzes alignment to determine if multiple distinct variants exist.
@@ -71,7 +71,7 @@ checkpoint split_reads:
     """
     Split subsampled reads into cluster-specific FASTQ files.
     
-    Upstream: align.smk (rule subsample) AND rule detect_clusters
+    Upstream: rule subsample (in 2_alignment.smk) AND rule detect_clusters
     Downstream: rule realign_cluster (for each cluster detected)
     
     If clusters were detected, splits reads into separate files (sample_A.fastq, sample_B.fastq, etc.).

@@ -52,8 +52,8 @@ subsample:
 
 # ==================== Alignment ====================
 
-alignment:
-  # MAFFT algorithm for per-sample alignment
+initial_alignment:
+  # MAFFT algorithm for initial per-sample alignment
   # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
   mafft_algorithm: "ginsi"
   # Gap opening penalty (default: 1.53 for --auto, algorithm-specific otherwise)
