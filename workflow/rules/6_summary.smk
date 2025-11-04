@@ -106,7 +106,7 @@ rule generate_summary:
         naive_db = NAIVE_DATABASE_FILE,
         multi_db = MULTI_DATABASE_FILE
     output:
-        report = OUT_DIR / "pipeline_summary.md"
+        report = PIPELINE_SUMMARY_FILE
     conda:
         "../envs/qc.yaml"
     log:
