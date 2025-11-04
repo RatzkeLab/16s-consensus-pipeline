@@ -63,23 +63,6 @@ initial_alignment:
   # Set to 0 to use MAFFT defaults
   gap_extend: 0
   
-cluster_alignment:
-  # MAFFT algorithm for cluster realignment
-  # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
-  mafft_algorithm: "ginsi"
-  # Gap opening penalty (0 = use MAFFT defaults)
-  gap_open: 0
-  # Gap extension penalty (0 = use MAFFT defaults)
-  gap_extend: 0
-  
-qc_alignment:
-  # MAFFT algorithm for final multi-consensus alignment
-  # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
-  mafft_algorithm: "default"
-  # Gap opening penalty (0 = use MAFFT defaults)
-  gap_open: 0
-  # Gap extension penalty (0 = use MAFFT defaults)
-  gap_extend: 0
 
 
 # ==================== Consensus ====================
@@ -140,6 +123,30 @@ multi_consensus:
   # Below this threshold, all variants at position are recorded
   min_consensus_proportion: 0.6
 
+
+# ==================== Cluster realignment (after splitting) ====================
+
+cluster_alignment:
+  # MAFFT algorithm for cluster realignment
+  # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
+  mafft_algorithm: "ginsi"
+  # Gap opening penalty (0 = use MAFFT defaults)
+  gap_open: 0
+  # Gap extension penalty (0 = use MAFFT defaults)
+  gap_extend: 0
+
+
+
+## ==================== QC alignment of final consensus sequences ====================
+
+qc_alignment:
+  # MAFFT algorithm for final multi-consensus alignment
+  # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
+  mafft_algorithm: "default"
+  # Gap opening penalty (0 = use MAFFT defaults)
+  gap_open: 0
+  # Gap extension penalty (0 = use MAFFT defaults)
+  gap_extend: 0
 
 
 ## ==================== Output Report ====================
