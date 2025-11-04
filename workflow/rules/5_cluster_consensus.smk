@@ -93,3 +93,102 @@ rule pool_multi:
         echo "Pooled $NUM_SEQS cluster consensus sequences into database" > {log}
         """
 
+
+# ==================== Cluster Alignment QC (Profile & Visualize) ====================
+
+rule profile_cluster_alignment:
+    """
+    Generate read profiles from cluster alignments for QC visualization.
+    
+    Upstream: clustering.smk (rule realign_cluster)
+    Downstream: rule visualize_cluster_alignment
+    
+    Creates profiles for each read in the cluster-specific alignment to
+    validate that the cluster alignment is internally consistent and that
+    reads within the cluster are indeed similar.
+    """
+    input:
+        alignment = CLUSTER_ALIGNMENT_DIR / "{sample}" / "{cluster}.fasta"
+    output:
+        outdir = directory(CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}")
+    params:
+        min_agreement = MULTI_CONSENSUS_MIN_AGREEMENT,
+        trim_bp = MULTI_CONSENSUS_TRIM_BP,
+        auto_trim_flag = MULTI_CONSENSUS_AUTO_TRIM_FLAG,
+        compress_gaps_flag = MULTI_CONSENSUS_COMPRESS_GAPS_FLAG,
+    log:
+        LOG_DIR / "profile_cluster_alignment" / "{sample}_{cluster}.log"
+    conda:
+        "../envs/qc.yaml"
+    shell:
+        """
+        python workflow/scripts/generate_profiles.py \
+          {input.alignment} \
+          {output.outdir} \
+          --min_agreement {params.min_agreement} \
+          --trim_bp {params.trim_bp} \
+          {params.auto_trim_flag} \
+          {params.compress_gaps_flag} \
+          2> {log}
+        """
+
+
+rule visualize_cluster_alignment:
+    """
+    Cluster and visualize reads within each cluster alignment for QC.
+    
+    Upstream: rule profile_cluster_alignment
+    Downstream: None (QC output)
+    
+    Generates clustering visualization to validate that:
+    - Reads within a cluster are homogeneous
+    - No sub-clusters were missed
+    - Alignment quality is good
+    """
+    input:
+        profile_dir = CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}"
+    output:
+        outdir = directory(CLUSTER_ALIGNMENT_CLUSTER_VIZ_DIR / "{sample}" / "{cluster}")
+    params:
+        min_cluster_size = MULTI_CONSENSUS_MIN_CLUSTER_SIZE,
+        min_cluster_size_percent = MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT,
+        max_clusters = MULTI_CONSENSUS_MAX_CLUSTERS,
+        min_variable_positions = MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS,
+    log:
+        LOG_DIR / "visualize_cluster_alignment" / "{sample}_{cluster}.log"
+    conda:
+        "../envs/qc.yaml"
+    shell:
+        """
+        python workflow/scripts/cluster_from_profiles.py \
+          {input.profile_dir} \
+          {output.outdir} \
+          --min_cluster_size {params.min_cluster_size} \
+          --min_cluster_size_percent {params.min_cluster_size_percent} \
+          --max_clusters {params.max_clusters} \
+          --min_variable_positions {params.min_variable_positions} \
+          2> {log}
+        """
+
+
+# ==================== Aggregate Cluster Alignment QC ====================
+
+rule aggregate_cluster_alignment_qc:
+    """
+    Aggregate rule to trigger all cluster alignment visualizations.
+    
+    This rule ensures that visualizations are generated for all cluster
+    alignments across all samples. It doesn't produce output itself but
+    depends on all the visualization directories.
+    """
+    input:
+        lambda w: get_all_cluster_alignment_viz_dirs(w)
+    output:
+        touch(QC_DIR / "cluster_alignment_qc_complete.txt")
+    log:
+        LOG_DIR / "aggregate" / "cluster_alignment_qc.log"
+    shell:
+        """
+        echo "Generated QC visualizations for $(echo {input} | wc -w) cluster alignments" > {log}
+        """
+

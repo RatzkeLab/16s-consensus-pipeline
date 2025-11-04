@@ -143,3 +143,34 @@ def get_all_cluster_consensus_files(checkpoints, wildcards, cluster_consensus_di
             all_consensus.append(str(consensus_file))
     
     return all_consensus
+
+
+def get_all_cluster_alignment_viz_dirs(checkpoints, wildcards, cluster_alignment_viz_dir):
+    """
+    Get all cluster alignment visualization directories for all passing samples.
+    
+    Args:
+        checkpoints: Snakemake checkpoints object
+        wildcards: Snakemake wildcards object
+        cluster_alignment_viz_dir: Path to cluster alignment visualization directory
+    
+    Returns:
+        List of paths to all cluster alignment visualization directories
+    """
+    checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
+    passing = read_passing_samples(checkpoint_output)
+    all_viz_dirs = []
+    
+    for sample in passing:
+        # Get split reads checkpoint output for this sample
+        checkpoint_output = checkpoints.split_reads.get(sample=sample).output.outdir
+        split_dir = Path(checkpoint_output)
+        fastq_files = list(split_dir.glob("*.fastq"))
+        
+        # Generate viz directory paths for each cluster
+        for fastq in sorted(fastq_files):
+            cluster_name = fastq.stem
+            viz_dir = cluster_alignment_viz_dir / sample / cluster_name
+            all_viz_dirs.append(str(viz_dir))
+    
+    return all_viz_dirs

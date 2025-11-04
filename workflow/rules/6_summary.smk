@@ -62,7 +62,7 @@ rule qc_alignment:
     Create QC alignment of all consensus sequences using MAFFT.
     
     Upstream: cluster_consensus.smk (rule pool_multi)
-    Downstream: None (analysis/inspection output)
+    Downstream: rule profile_qc_alignment
     
     Aligns all consensus sequences together for user inspection and
     quick visual comparison of sequence similarity across samples.
@@ -81,6 +81,82 @@ rule qc_alignment:
     shell:
         """
         mafft {params.mafft_flags} --thread {threads} {input.multi_db} > {output.alignment} 2> {log}
+        """
+
+
+rule profile_qc_alignment:
+    """
+    Generate profiles from the final QC alignment of all consensus sequences.
+    
+    Upstream: rule qc_alignment
+    Downstream: rule visualize_qc_alignment
+    
+    Creates profiles for each consensus sequence in the QC alignment to
+    identify variable positions across all samples and prepare for
+    clustering visualization.
+    """
+    input:
+        alignment = QC_ALIGNMENT_FILE
+    output:
+        outdir = directory(QC_ALIGNMENT_PROFILES_DIR)
+    params:
+        min_agreement = MULTI_CONSENSUS_MIN_AGREEMENT,
+        trim_bp = MULTI_CONSENSUS_TRIM_BP,
+        auto_trim_flag = MULTI_CONSENSUS_AUTO_TRIM_FLAG,
+        compress_gaps_flag = MULTI_CONSENSUS_COMPRESS_GAPS_FLAG,
+    log:
+        LOG_DIR / "summary" / "profile_qc_alignment.log"
+    conda:
+        "../envs/qc.yaml"
+    shell:
+        """
+        python workflow/scripts/generate_profiles.py \
+          {input.alignment} \
+          {output.outdir} \
+          --min_agreement {params.min_agreement} \
+          --trim_bp {params.trim_bp} \
+          {params.auto_trim_flag} \
+          {params.compress_gaps_flag} \
+          2> {log}
+        """
+
+
+rule visualize_qc_alignment:
+    """
+    Cluster and visualize all consensus sequences for final QC.
+    
+    Upstream: rule profile_qc_alignment
+    Downstream: None (QC output)
+    
+    Generates hierarchical clustering and heatmap visualization of all
+    consensus sequences to show:
+    - Which samples are most similar
+    - Whether distinct groups/species exist
+    - Overall sequence diversity
+    """
+    input:
+        profile_dir = QC_ALIGNMENT_PROFILES_DIR
+    output:
+        outdir = directory(QC_ALIGNMENT_CLUSTER_VIZ_DIR)
+    params:
+        min_cluster_size = 1,  # For QC, allow single-sample clusters
+        min_cluster_size_percent = 0.0,
+        max_clusters = 20,  # Allow more clusters since this is cross-sample
+        min_variable_positions = 1,  # Lower threshold for final QC
+    log:
+        LOG_DIR / "summary" / "visualize_qc_alignment.log"
+    conda:
+        "../envs/qc.yaml"
+    shell:
+        """
+        python workflow/scripts/cluster_from_profiles.py \
+          {input.profile_dir} \
+          {output.outdir} \
+          --min_cluster_size {params.min_cluster_size} \
+          --min_cluster_size_percent {params.min_cluster_size_percent} \
+          --max_clusters {params.max_clusters} \
+          --min_variable_positions {params.min_variable_positions} \
+          2> {log}
         """
 
 

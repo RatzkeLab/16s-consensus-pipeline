@@ -13,6 +13,7 @@ from checkpoint_helpers import (
     get_cluster_fastqs_for_sample as _get_cluster_fastqs_for_sample,
     get_all_cluster_fastqs as _get_all_cluster_fastqs,
     get_all_cluster_consensus_files as _get_all_cluster_consensus_files,
+    get_all_cluster_alignment_viz_dirs as _get_all_cluster_alignment_viz_dirs,
 )
 
 from common_helpers import (
@@ -34,12 +35,16 @@ FILTER_DIR = OUT_DIR / "01_filtered"
 SUBSAMPLE_DIR = OUT_DIR / "02_subsampled"
 ALIGNMENT_DIR = OUT_DIR / "03_alignment"
 NAIVE_CONSENSUS_DIR = OUT_DIR / "04_naive_consensus"
-PROFILE_DIR = OUT_DIR / "04b_read_profiles"
-CLUSTER_DETECTION_DIR = OUT_DIR / "05_cluster_detection"
-SPLIT_READS_DIR = OUT_DIR / "06_split_reads"
-CLUSTER_ALIGNMENT_DIR = OUT_DIR / "07_cluster_alignments"
-CLUSTER_CONSENSUS_DIR = OUT_DIR / "08_cluster_consensus"
-QC_DIR = OUT_DIR / "09_qc"
+PROFILE_DIR = OUT_DIR / "05_read_profiles"
+CLUSTER_DETECTION_DIR = OUT_DIR / "06_cluster_detection"
+SPLIT_READS_DIR = OUT_DIR / "07_split_reads"
+CLUSTER_ALIGNMENT_DIR = OUT_DIR / "08_cluster_alignments"
+CLUSTER_CONSENSUS_DIR = OUT_DIR / "09_cluster_consensus"
+CLUSTER_ALIGNMENT_PROFILES_DIR = OUT_DIR / "08b_cluster_alignment_profiles"
+CLUSTER_ALIGNMENT_CLUSTER_VIZ_DIR = OUT_DIR / "08c_cluster_alignment_viz"
+QC_DIR = OUT_DIR / "10_qc"
+QC_ALIGNMENT_PROFILES_DIR = QC_DIR / "qc_alignment_profiles"
+QC_ALIGNMENT_CLUSTER_VIZ_DIR = QC_DIR / "qc_alignment_viz"
 LOG_DIR = OUT_DIR / "logs"
 
 # Thresholds and parameters
@@ -127,6 +132,10 @@ def get_all_cluster_fastqs(wildcards):
 def get_all_cluster_consensus_files(wildcards):
     """Get all cluster consensus files for all passing samples."""
     return _get_all_cluster_consensus_files(checkpoints, wildcards, CLUSTER_CONSENSUS_DIR)
+
+def get_all_cluster_alignment_viz_dirs(wildcards):
+    """Get all cluster alignment visualization directories for all passing samples."""
+    return _get_all_cluster_alignment_viz_dirs(checkpoints, wildcards, CLUSTER_ALIGNMENT_CLUSTER_VIZ_DIR)
 
 # ==================== Initialize ====================
 # Dynamically generate command flags from config on initialization

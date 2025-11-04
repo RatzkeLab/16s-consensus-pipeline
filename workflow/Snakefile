@@ -29,6 +29,9 @@ rule all:
         # Analysis outputs
         PAIRWISE_DISTANCE_HEATMAP_FILE,
         QC_ALIGNMENT_FILE,
+        # QC visualizations
+        QC_ALIGNMENT_CLUSTER_VIZ_DIR,
+        QC_DIR / "cluster_alignment_qc_complete.txt",
         # Summary report
         PIPELINE_SUMMARY_FILE
     default_target: True
