@@ -201,7 +201,7 @@ def plot_cluster_heatmap(dist_matrix, headers, linkage_matrix, outpath, cluster_
 
 def main():
     parser = argparse.ArgumentParser(description="Detect subclusters from read profiles")
-    parser.add_argument("profile_dir", help="Directory containing read_profiles.tsv")
+    parser.add_argument("profile_file", help="Path to read_profiles.tsv file")
     parser.add_argument("outdir", help="Output directory")
     parser.add_argument("--min_cluster_size", type=int, default=5,
                         help="Minimum absolute cluster size")
@@ -214,16 +214,16 @@ def main():
     
     args = parser.parse_args()
     
-    profile_dir = Path(args.profile_dir)
+    profile_file = Path(args.profile_file)
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     
-    # Read profiles
-    profile_file = profile_dir / "read_profiles.tsv"
+    # Check if profile file exists
     if not profile_file.exists():
         sys.stderr.write(f"Error: Profile file not found: {profile_file}\n")
         sys.exit(1)
     
+    # Read profiles
     profiles, variable_positions = read_profiles(profile_file)
     sys.stderr.write(f"Loaded {len(profiles)} read profiles with {len(variable_positions)} variable positions\n")
     

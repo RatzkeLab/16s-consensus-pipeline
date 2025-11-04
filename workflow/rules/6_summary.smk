@@ -98,7 +98,7 @@ rule profile_qc_alignment:
     input:
         alignment = QC_ALIGNMENT_FILE
     output:
-        outdir = directory(QC_ALIGNMENT_PROFILES_DIR)
+        profile_tsv = QC_ALIGNMENT_PROFILES_DIR / "qc_alignment_profiles.tsv"
     params:
         min_agreement = MULTI_CONSENSUS_MIN_AGREEMENT,
         trim_bp = MULTI_CONSENSUS_TRIM_BP,
@@ -112,7 +112,7 @@ rule profile_qc_alignment:
         """
         python workflow/scripts/generate_profiles.py \
           {input.alignment} \
-          {output.outdir} \
+          {output.profile_tsv} \
           --min_agreement {params.min_agreement} \
           --trim_bp {params.trim_bp} \
           {params.auto_trim_flag} \
@@ -135,7 +135,7 @@ rule visualize_qc_alignment:
     - Overall sequence diversity
     """
     input:
-        profile_dir = QC_ALIGNMENT_PROFILES_DIR
+        profile_tsv = QC_ALIGNMENT_PROFILES_DIR / "qc_alignment_profiles.tsv"
     output:
         outdir = directory(QC_ALIGNMENT_CLUSTER_VIZ_DIR)
     params:
@@ -150,7 +150,7 @@ rule visualize_qc_alignment:
     shell:
         """
         python workflow/scripts/cluster_from_profiles.py \
-          {input.profile_dir} \
+          {input.profile_tsv} \
           {output.outdir} \
           --min_cluster_size {params.min_cluster_size} \
           --min_cluster_size_percent {params.min_cluster_size_percent} \

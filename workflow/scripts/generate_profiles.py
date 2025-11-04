@@ -137,7 +137,7 @@ def create_read_profiles(seqs, variable_positions):
 def main():
     parser = argparse.ArgumentParser(description="Generate per-read profiles from alignment")
     parser.add_argument("alignment", help="Input alignment FASTA file")
-    parser.add_argument("outdir", help="Output directory")
+    parser.add_argument("output", help="Output TSV file")
     parser.add_argument("--min_agreement", type=float, default=0.8,
                         help="Maximum agreement threshold for identifying variable positions")
     parser.add_argument("--trim_bp", type=int, default=70,
@@ -153,8 +153,9 @@ def main():
     seqs = read_fasta(args.alignment)
     sys.stderr.write(f"Loaded {len(seqs)} sequences from alignment\n")
     
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    # Ensure output directory exists
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     
     # Compress gap runs if requested
     if args.compress_gaps:
@@ -171,7 +172,7 @@ def main():
     profiles = create_read_profiles(seqs, variable_positions)
     
     # Write read profiles to TSV
-    with open(outdir / "read_profiles.tsv", "w") as f:
+    with open(output_path, "w") as f:
         # Header: read_id, then each variable position
         f.write("read_id\t" + "\t".join(f"pos_{p}" for p in variable_positions) + "\n")
         
@@ -180,14 +181,7 @@ def main():
             profile = profiles[read_id]
             f.write(f"{read_id}\t" + "\t".join(profile) + "\n")
     
-    sys.stderr.write(f"Wrote {len(profiles)} read profiles to read_profiles.tsv\n")
-    
-    # Write variable positions list
-    with open(outdir / "variable_positions.txt", "w") as f:
-        for pos in variable_positions:
-            f.write(f"{pos}\n")
-    
-    sys.stderr.write(f"Wrote variable positions to variable_positions.txt\n")
+    sys.stderr.write(f"Wrote {len(profiles)} read profiles to {output_path}\n")
     sys.stderr.write("Profile generation complete\n")
 
 

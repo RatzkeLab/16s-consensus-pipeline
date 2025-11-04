@@ -110,7 +110,7 @@ rule profile_cluster_alignment:
     input:
         alignment = CLUSTER_ALIGNMENT_DIR / "{sample}" / "{cluster}.fasta"
     output:
-        outdir = directory(CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}")
+        profile_tsv = CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}.tsv"
     params:
         min_agreement = MULTI_CONSENSUS_MIN_AGREEMENT,
         trim_bp = MULTI_CONSENSUS_TRIM_BP,
@@ -124,7 +124,7 @@ rule profile_cluster_alignment:
         """
         python workflow/scripts/generate_profiles.py \
           {input.alignment} \
-          {output.outdir} \
+          {output.profile_tsv} \
           --min_agreement {params.min_agreement} \
           --trim_bp {params.trim_bp} \
           {params.auto_trim_flag} \
@@ -146,7 +146,7 @@ rule visualize_cluster_alignment:
     - Alignment quality is good
     """
     input:
-        profile_dir = CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}"
+        profile_tsv = CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}.tsv"
     output:
         outdir = directory(CLUSTER_ALIGNMENT_CLUSTER_VIZ_DIR / "{sample}" / "{cluster}")
     params:
@@ -161,7 +161,7 @@ rule visualize_cluster_alignment:
     shell:
         """
         python workflow/scripts/cluster_from_profiles.py \
-          {input.profile_dir} \
+          {input.profile_tsv} \
           {output.outdir} \
           --min_cluster_size {params.min_cluster_size} \
           --min_cluster_size_percent {params.min_cluster_size_percent} \

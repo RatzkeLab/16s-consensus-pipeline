@@ -34,10 +34,7 @@ rule generate_profiles:
     input:
         alignment=ALIGNMENT_DIR / "{sample}.fasta"
     output:
-        # Output directory will contain:
-        # - read_profiles.tsv (profile for each read)
-        # - variable_positions.txt (list of variable positions)
-        outdir=directory(PROFILE_DIR / "{sample}")
+        profile_tsv=PROFILE_DIR / "{sample}.tsv"
     params:
         min_agreement=MULTI_CONSENSUS_MIN_AGREEMENT,
         trim_bp=MULTI_CONSENSUS_TRIM_BP,
@@ -51,7 +48,7 @@ rule generate_profiles:
         """
         python workflow/scripts/generate_profiles.py \
           {input.alignment} \
-          {output.outdir} \
+          {output.profile_tsv} \
           --min_agreement {params.min_agreement} \
           --trim_bp {params.trim_bp} \
           {params.auto_trim_flag} \
@@ -79,7 +76,7 @@ rule detect_clusters:
     Outputs cluster assignments if found, or marker file if single cluster.
     """
     input:
-        profile_dir=PROFILE_DIR / "{sample}"
+        profile_tsv=PROFILE_DIR / "{sample}.tsv"
     output:
         # Output directory will contain either:
         # - cluster_assignments.tsv (if clusters found)
@@ -97,7 +94,7 @@ rule detect_clusters:
     shell:
         """
         python workflow/scripts/cluster_from_profiles.py \
-          {input.profile_dir} \
+          {input.profile_tsv} \
           {output.outdir} \
           --min_cluster_size {params.min_cluster_size} \
           --min_cluster_size_percent {params.min_cluster_size_percent} \
