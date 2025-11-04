@@ -6,6 +6,7 @@
 This is a Snakemake 9 pipeline that processes samples **independently** until the final aggregation step, maximizing parallelization. Each sample flows through checkpoints that filter out low-quality data before expensive operations.
 
 ### Directory Structure
+```
 workflow/
 ├── Snakefile # Main entry point, includes all rules
 ├── rules/
@@ -25,6 +26,7 @@ workflow/
 │ ├── pairwise_distances.py
 │ └── split_by_cluster.py
 └── envs/ # Conda environment files
+```
 
 ### Sample Flow
                              ┌→ naive_consensus ─┐
