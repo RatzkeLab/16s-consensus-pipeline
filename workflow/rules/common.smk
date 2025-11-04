@@ -86,6 +86,7 @@ PAIRWISE_DISTANCE_FILE = QC_DIR / config.get("pairwise_distance_filename", "pair
 MULTI_ALIGNMENT_FILE = QC_DIR / config.get("multi_alignment_filename", "all_consensus_alignment.fasta")
 PAIRWISE_DISTANCE_MATRIX_FILE = QC_DIR / config.get("pairwise_distance_matrix_filename", "pairwise_distance_matrix.tsv")
 PAIRWISE_DISTANCE_HEATMAP_FILE = QC_DIR / config.get("pairwise_distance_heatmap_filename", "pairwise_distance_heatmap.png")
+PIPELINE_SUMMARY_FILE = QC_DIR / "pipeline_summary.md"
 
 # ==================== Helper Functions (Wrappers) ====================
 # See common_helpers.py for base functions
