@@ -1,5 +1,5 @@
 """
-Naive consensus generation rules for the 16S consensus pipeline.
+Naive consensus: single consensus (1 sequence per sample without cluster detection).
 
 This module handles the "naive" consensus path - generating a single consensus
 sequence per sample without attempting to detect and separate multiple strains:
@@ -79,3 +79,4 @@ rule pool_naive:
         NUM_SEQS=$(grep -c "^>" {output.database} || true)
         echo "Pooled $NUM_SEQS naive consensus sequences into database" > {log}
         """
+

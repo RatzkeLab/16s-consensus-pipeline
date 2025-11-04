@@ -92,3 +92,4 @@ rule pool_multi:
         NUM_SEQS=$(grep -c "^>" {output.database} || echo "0")
         echo "Pooled $NUM_SEQS cluster consensus sequences into database" > {log}
         """
+

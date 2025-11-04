@@ -45,8 +45,6 @@ LOG_DIR = OUT_DIR / "logs"
 MIN_READS_INITIAL = config.get("min_reads_initial", 10)
 MIN_READS_FILTERED = config.get("min_reads_filtered", 5)
 SUBSAMPLE_N = config.get("subsample_n", 150)
-# Deterministic subsampling seed (seqtk -s). Allows reproducible subsampling.
-# Read from config.subsample.seed if provided, else defaults to 42.
 SUBSAMPLE_SEED = config.get("subsample", {}).get("seed", 42)
 
 # NanoFilt parameters
@@ -95,28 +93,23 @@ PIPELINE_SUMMARY_FILE = QC_DIR / "pipeline_summary.md"
 def get_input_fastq(wildcards):
     return get_input_fastq_path(INPUT_DIR, wildcards.sample)
 
-# Wrapper functions for checkpoint helpers
 def get_passing_samples(wildcards):
     """Get samples that passed initial read count checkpoint."""
     checkpoint_output = checkpoints.check_min_reads.get(**wildcards).output.passing
     return _get_passing_samples(checkpoints, checkpoint_output)
 
-
 def get_filtered_fastq_files(wildcards):
     """Get filtered FASTQ files for samples that passed checkpoint."""
     return _get_filtered_fastq_files(checkpoints, wildcards, FILTER_DIR)
-
 
 def get_aligned_samples(wildcards):
     """Get samples that passed post-filter checkpoint."""
     checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
     return _get_aligned_samples(checkpoints, checkpoint_output)
 
-
 def get_cluster_samples(wildcards):
     """Get samples that have cluster alignments."""
     return _get_cluster_samples(checkpoints, wildcards, CLUSTER_ALIGNMENT_DIR)
-
 
 def get_naive_consensus_files(wildcards):
     """Get naive consensus FASTA files for aligned samples."""
@@ -126,16 +119,13 @@ def get_cluster_fastqs_for_sample(wildcards):
     """Get cluster FASTQ files for a sample after split_reads checkpoint."""
     return _get_cluster_fastqs_for_sample(checkpoints, wildcards)
 
-
 def get_all_cluster_fastqs(wildcards):
     """Get all cluster FASTQ files for all passing samples."""
     return _get_all_cluster_fastqs(checkpoints, wildcards)
 
-
 def get_all_cluster_consensus_files(wildcards):
     """Get all cluster consensus files for all passing samples."""
     return _get_all_cluster_consensus_files(checkpoints, wildcards, CLUSTER_CONSENSUS_DIR)
-
 
 # ==================== Initialize ====================
 # Dynamically generate command flags from config on initialization
@@ -143,14 +133,12 @@ def get_all_cluster_consensus_files(wildcards):
 # Get all sample names from input directory
 ALL_SAMPLES = get_sample_names(INPUT_DIR)
 
-# Build NanoFilt parameters
 NANOFILT_PARAMS = build_nanofilt_params(
     min_quality=NANOFILT_MIN_QUALITY,
     min_length=NANOFILT_MIN_LENGTH,
     max_length=NANOFILT_MAX_LENGTH
 )
 
-# Build MAFFT flags for each alignment context
 MAFFT_ALIGN_FLAGS = build_mafft_flags(
     config.get("alignment", {}).get("mafft_algorithm", "default"),
     config.get("alignment", {}).get("gap_open", 0),
@@ -166,3 +154,4 @@ MAFFT_MULTI_ALIGN_FLAGS = build_mafft_flags(
     config.get("multi_alignment", {}).get("gap_open", 0),
     config.get("multi_alignment", {}).get("gap_extend", 0)
 )
+

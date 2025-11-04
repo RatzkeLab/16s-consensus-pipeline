@@ -1,7 +1,6 @@
 """
-Alignment preparation and execution rules for the 16S consensus pipeline.
+Alignment: subsampling and alignment of filtered reads.
 
-This module handles subsampling and alignment of filtered reads:
 1. Subsample reads to a maximum number (optional, for efficiency)
 2. Align reads using MAFFT for multiple sequence alignment
 
@@ -89,3 +88,4 @@ rule align:
           | mafft --thread {threads} {params.mafft_flags} - \
           > {output.alignment} 2> {log}
         """
+

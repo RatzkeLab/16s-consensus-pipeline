@@ -1,13 +1,12 @@
 """
 16S Consensus Pipeline - Main Snakefile
 
-This pipeline processes Oxford Nanopore long-read 16S rRNA sequencing data
+This pipeline was built specifically to process Oxford Nanopore long-read 16S rRNA sequencing data
 to generate consensus sequences for each sample.
 """
 
 configfile: "demo/default_config.yaml"
 
-# Include rule modules
 include: "rules/common.smk"
 include: "rules/1_preprocessing.smk"
 include: "rules/2_align.smk"
@@ -15,8 +14,6 @@ include: "rules/3_naive_consensus.smk"
 include: "rules/4_clustering.smk"
 include: "rules/5_cluster_consensus.smk"
 include: "rules/6_summary.smk"
-
-# ==================== Target Rule ====================
 
 rule all:
     """
@@ -35,3 +32,4 @@ rule all:
         # Summary report
         OUT_DIR / "pipeline_summary.md"
     default_target: True
+

@@ -1,8 +1,6 @@
 """
-Cluster detection and splitting rules for the 16S consensus pipeline.
+Cluster detection: detect and split multiple strains/variants within samples.
 
-This module handles the detection of multiple strains/variants within samples
-and preparation for multi-consensus generation:
 1. Detect subclusters in alignment (if multiple variants exist)
 2. Split reads by cluster assignment into separate FASTQ files (checkpoint)
 3. Realign each cluster separately for improved accuracy
@@ -138,3 +136,4 @@ rule realign_cluster:
         seqkit fq2fa {input.fastq} 2>> {log} | \
         mafft {params.mafft_flags} --thread 1 - > {output.fasta} 2>> {log}
         """
+
