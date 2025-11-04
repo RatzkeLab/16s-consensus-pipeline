@@ -1,5 +1,5 @@
 """
-Preprocessing rules for the 16S consensus pipeline.
+Preprocessing: quality control and filtering.
 
 This module handles the initial quality control and filtering stages of the pipeline:
 1. Count raw reads per sample
@@ -47,11 +47,8 @@ rule count_reads:
             READ_COUNT=$(awk 'END{{print NR/4}}' {input.fastq})
         fi
         
-        # Write report
         echo -e "sample\treads" > {output.report}
         echo -e "{params.sample}\t$READ_COUNT" >> {output.report}
-        
-        # Log
         echo "Sample {params.sample}: $READ_COUNT reads" > {log}
         """
 
@@ -88,11 +85,8 @@ checkpoint check_min_reads:
     shell:
         """
         set -euo pipefail
-        
-        # Create output directory
         mkdir -p "$(dirname {output.passing})" "$(dirname {log})"
         
-        # Initialize outputs
         echo -e "sample\treads\tthreshold\tstatus" > {output.summary}
         > {output.passing}
         
@@ -110,7 +104,6 @@ checkpoint check_min_reads:
                 STATUS="FAIL"
             fi
             
-            # Add to summary
             echo -e "$SAMPLE\t$READS\t{params.min_reads}\t$STATUS" >> {output.summary}
         done
         
@@ -128,7 +121,7 @@ checkpoint check_min_reads:
         
         # Check if any samples passed
         if [ "$PASSED" -eq 0 ]; then
-            echo "ERROR: No samples passed the minimum read threshold of {params.min_reads}" >> {log}
+            echo "ERROR: No samples passed minimum read threshold of {params.min_reads}" >> {log}
             exit 1
         fi
         """
@@ -169,8 +162,6 @@ rule filter_reads:
     shell:
         """
         set -euo pipefail
-        
-        # Create output directory
         mkdir -p "$(dirname {output.fastq})" "$(dirname {log})"
         
         # Log filtering parameters
@@ -194,7 +185,6 @@ rule filter_reads:
             echo "" >> {log}
             echo "Filtered reads: $FILTERED_READS" >> {log}
         else
-            # No filtering - just copy/decompress
             if [[ {input.fastq} == *.gz ]]; then
                 zcat {input.fastq} > {output.fastq}
             else
@@ -202,34 +192,6 @@ rule filter_reads:
             fi
             echo "No filtering applied (pass-through)" >> {log}
         fi
-        """
-
-
-# ==================== Post-Filter Read Count ====================
-
-rule count_filtered_reads:
-    """
-    Count reads in filtered FASTQ files.
-    
-    Upstream: rule filter_reads (filtered FASTQs)
-    Downstream: checkpoint check_min_reads_filtered (aggregates filtered counts)
-    """
-    input:
-        fastq=FILTER_DIR / "{sample}.fastq"
-    output:
-        report=CHECK_DIR / "{sample}_filtered_readcount.tsv"
-    params:
-        sample="{sample}"
-    log:
-        LOG_DIR / "check_filtered" / "{sample}.log"
-    conda:
-        "../envs/qc.yaml"
-    shell:
-        """
-        READ_COUNT=$(awk 'END{{print NR/4}}' {input.fastq})
-        echo -e "sample\treads" > {output.report}
-        echo -e "{params.sample}\t$READ_COUNT" >> {output.report}
-        echo "Sample {params.sample}: $READ_COUNT filtered reads" > {log}
         """
 
 
@@ -246,7 +208,7 @@ checkpoint check_min_reads_filtered:
     quality filtering to proceed with alignment and consensus calling.
     """
     input:
-        reports=get_filtered_fastq_files
+        fastqs=get_filtered_fastq_files
     output:
         passing=CHECK_DIR / "passing_filtered_samples.txt",
         summary=CHECK_DIR / "filtered_check_summary.tsv"
@@ -262,7 +224,7 @@ checkpoint check_min_reads_filtered:
         echo -e "sample\treads\tthreshold\tstatus" > {output.summary}
         > {output.passing}
         
-        for fq in {input.reports}; do
+        for fq in {input.fastqs}; do
             SAMPLE=$(basename "$fq" .fastq)
             READS=$(awk 'END{{print NR/4}}' "$fq")
             
@@ -284,3 +246,4 @@ checkpoint check_min_reads_filtered:
             exit 1
         fi
         """
+
