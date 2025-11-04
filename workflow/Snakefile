@@ -28,7 +28,7 @@ rule all:
         MULTI_DATABASE_FILE,
         # Analysis outputs
         PAIRWISE_DISTANCE_HEATMAP_FILE,
-        MULTI_ALIGNMENT_FILE,
+        QC_ALIGNMENT_FILE,
         # Summary report
         PIPELINE_SUMMARY_FILE
     default_target: True

@@ -57,27 +57,27 @@ rule pairwise_distance_heatmap:
         "../scripts/distance_heatmap.py"
 
 
-rule multi_align_consensus:
+rule qc_alignment:
     """
-    Create multi-alignment of all consensus sequences using MAFFT.
+    Create QC alignment of all consensus sequences using MAFFT.
     
     Upstream: cluster_consensus.smk (rule pool_multi)
-    Downstream: None (analysis output)
+    Downstream: None (analysis/inspection output)
     
-    Aligns all consensus sequences together for visualization and
-    comparison of sequence variation across samples.
+    Aligns all consensus sequences together for user inspection and
+    quick visual comparison of sequence similarity across samples.
     """
     input:
         multi_db = MULTI_DATABASE_FILE
     output:
-        alignment = MULTI_ALIGNMENT_FILE
+        alignment = QC_ALIGNMENT_FILE
     conda:
         "../envs/align.yaml"
     log:
-        LOG_DIR / "summary" / "multi_align.log"
+        LOG_DIR / "summary" / "qc_alignment.log"
     threads: 4
     params:
-        mafft_flags=MAFFT_MULTI_ALIGN_FLAGS
+        mafft_flags=MAFFT_QC_ALIGN_FLAGS
     shell:
         """
         mafft {params.mafft_flags} --thread {threads} {input.multi_db} > {output.alignment} 2> {log}

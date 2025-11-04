@@ -72,7 +72,7 @@ cluster_alignment:
   # Gap extension penalty (0 = use MAFFT defaults)
   gap_extend: 0
   
-multi_alignment:
+qc_alignment:
   # MAFFT algorithm for final multi-consensus alignment
   # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
   mafft_algorithm: "default"
