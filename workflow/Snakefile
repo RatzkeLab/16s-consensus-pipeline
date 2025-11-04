@@ -30,6 +30,6 @@ rule all:
         PAIRWISE_DISTANCE_HEATMAP_FILE,
         MULTI_ALIGNMENT_FILE,
         # Summary report
-        OUT_DIR / "pipeline_summary.md"
+        PIPELINE_SUMMARY_FILE
     default_target: True
 
