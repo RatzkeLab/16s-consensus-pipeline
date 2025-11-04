@@ -109,23 +109,6 @@ def get_naive_consensus_files(checkpoints, wildcards, naive_consensus_dir):
     return [str(naive_consensus_dir / f"{sample}.fasta") for sample in passing]
 
 
-def get_multi_consensus_dirs(checkpoints, wildcards, multi_consensus_dir):
-    """
-    Get list of multi-consensus output directories for all passing samples.
-    
-    Args:
-        checkpoints: Snakemake checkpoints object
-        wildcards: Snakemake wildcards object
-        multi_consensus_dir: Path to multi-consensus directory
-    
-    Returns:
-        List of paths to sample-specific multi-consensus directories
-    """
-    checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
-    passing = get_aligned_samples(checkpoints, checkpoint_output)
-    return [str(multi_consensus_dir / sample) for sample in passing]
-
-
 def get_cluster_fastqs_for_sample(checkpoints, wildcards):
     """
     Get list of cluster FASTQ files for a sample after split_reads checkpoint.

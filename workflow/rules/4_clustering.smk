@@ -34,7 +34,7 @@ rule detect_clusters:
         # Output directory will contain either:
         # - cluster_assignments.tsv (if clusters found)
         # - no_clusters.txt (if single cluster)
-        outdir=directory(OUT_DIR / "cluster_detection" / "{sample}")
+        outdir=directory(CLUSTER_DETECTION_DIR / "{sample}")
     params:
         sample="{sample}",
         min_agreement=MULTI_CONSENSUS_MIN_AGREEMENT,
@@ -84,12 +84,12 @@ checkpoint split_reads:
     """
     input:
         fastq=SUBSAMPLE_DIR / "{sample}.fastq",
-        cluster_dir=OUT_DIR / "cluster_detection" / "{sample}"
+        cluster_dir=CLUSTER_DETECTION_DIR / "{sample}"
     output:
         # Output directory will contain either:
         # - sample.fastq (if no clusters)
         # - sample_A.fastq, sample_B.fastq, etc. (if clusters found)
-        outdir=directory(OUT_DIR / "split_reads" / "{sample}")
+        outdir=directory(SPLIT_READS_DIR / "{sample}")
     params:
         sample="{sample}"
     log:

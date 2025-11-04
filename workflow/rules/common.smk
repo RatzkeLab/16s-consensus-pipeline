@@ -10,7 +10,6 @@ from checkpoint_helpers import (
     get_filtered_fastq_files as _get_filtered_fastq_files,
     get_cluster_samples as _get_cluster_samples,
     get_naive_consensus_files as _get_naive_consensus_files,
-    get_multi_consensus_dirs as _get_multi_consensus_dirs,
     get_cluster_fastqs_for_sample as _get_cluster_fastqs_for_sample,
     get_all_cluster_fastqs as _get_all_cluster_fastqs,
     get_all_cluster_consensus_files as _get_all_cluster_consensus_files,
@@ -30,16 +29,15 @@ INPUT_DIR = Path(config.get("input_dir", "demo/merged"))
 OUT_DIR = Path(config.get("outdir", "demo_output"))
 
 # Structured output directories
-CHECK_DIR = OUT_DIR / "checks"
-FILTER_DIR = OUT_DIR / "filtered"
-SUBSAMPLE_DIR = OUT_DIR / "subsampled"
-ALIGNMENT_DIR = OUT_DIR / "alignment"
-NAIVE_CONSENSUS_DIR = OUT_DIR / "naive_consensus"
-CLUSTER_DETECTION_DIR = OUT_DIR / "cluster_detection"
-SPLIT_READS_DIR = OUT_DIR / "split_reads"
-CLUSTER_ALIGNMENT_DIR = OUT_DIR / "cluster_alignments"
-CLUSTER_CONSENSUS_DIR = OUT_DIR / "cluster_consensus"
-MULTI_CONSENSUS_DIR = OUT_DIR / "multi_consensus"
+CHECK_DIR = OUT_DIR / "00_checks"
+FILTER_DIR = OUT_DIR / "01_filtered"
+SUBSAMPLE_DIR = OUT_DIR / "02_subsampled"
+ALIGNMENT_DIR = OUT_DIR / "03_alignment"
+NAIVE_CONSENSUS_DIR = OUT_DIR / "04_naive_consensus"
+CLUSTER_DETECTION_DIR = OUT_DIR / "05_cluster_detection"
+SPLIT_READS_DIR = OUT_DIR / "06_split_reads"
+CLUSTER_ALIGNMENT_DIR = OUT_DIR / "07_cluster_alignments"
+CLUSTER_CONSENSUS_DIR = OUT_DIR / "08_cluster_consensus"
 LOG_DIR = OUT_DIR / "logs"
 
 # Thresholds and parameters
@@ -87,6 +85,8 @@ HEADCROP = config.get("filter", {}).get("headcrop", 0)
 TAILCROP = config.get("filter", {}).get("tailcrop", 0)
 
 # ==================== Helper Functions (Wrappers) ====================
+# See common_helpers.py for base functions
+# See checkpoint_helpers.py for checkpoint-specific functions
 
 def get_input_fastq(wildcards):
     return get_input_fastq_path(INPUT_DIR, wildcards.sample)
@@ -118,12 +118,6 @@ def get_naive_consensus_files(wildcards):
     """Get naive consensus FASTA files for aligned samples."""
     return _get_naive_consensus_files(checkpoints, wildcards, NAIVE_CONSENSUS_DIR)
 
-
-def get_multi_consensus_dirs(wildcards):
-    """Get multi-consensus output directories for all passing samples."""
-    return _get_multi_consensus_dirs(checkpoints, wildcards, MULTI_CONSENSUS_DIR)
-
-
 def get_cluster_fastqs_for_sample(wildcards):
     """Get cluster FASTQ files for a sample after split_reads checkpoint."""
     return _get_cluster_fastqs_for_sample(checkpoints, wildcards)
@@ -140,6 +134,7 @@ def get_all_cluster_consensus_files(wildcards):
 
 
 # ==================== Initialize ====================
+# Dynamically generate command flags from config on initialization
 
 # Get all sample names from input directory
 ALL_SAMPLES = get_sample_names(INPUT_DIR)
