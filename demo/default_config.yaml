@@ -14,23 +14,6 @@ outdir: "demo/demo_output"
 naive_database_filename: "naive_db.fasta"
 multi_database_filename: "multi_db.fasta"
 
-## ==================== Output Report ====================
-# Pairwise edit distance report
-pairwise_distance:
-  # Automatically calculate trim values based on longest leading/trailing gaps
-  # If true, ignore_first_n_bp and ignore_last_n_bp are ignored
-  auto_trim: true
-  
-  # Number of bp to ignore at start of sequences when calculating distances
-  # (reduces noise from alignment artifacts at sequence ends)
-  # Only used if auto_trim is false
-  ignore_first_n_bp: 70
-  
-  # Number of bp to ignore at end of sequences when calculating distances
-  # Only used if auto_trim is false
-  ignore_last_n_bp: 70
-
-
 # ==================== Quality Control ====================
 
 # Minimum number of reads required per sample (before filtering)
@@ -145,3 +128,18 @@ multi_consensus:
   # Below this threshold, all variants at position are recorded
   min_consensus_proportion: 0.6
 
+## ==================== Output Report ====================
+# Pairwise edit distance report
+pairwise_distance:
+  # Automatically calculate trim values based on longest leading/trailing gaps
+  # If true, ignore_first_n_bp and ignore_last_n_bp are ignored
+  auto_trim: true
+  
+  # Number of bp to ignore at start of sequences when calculating distances
+  # (reduces noise from alignment artifacts at sequence ends)
+  # Only used if auto_trim is false
+  ignore_first_n_bp: 70
+  
+  # Number of bp to ignore at end of sequences when calculating distances
+  # Only used if auto_trim is false
+  ignore_last_n_bp: 70

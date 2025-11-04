@@ -3,6 +3,7 @@ import sys
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(workflow.basedir) / "scripts"))
+
 from checkpoint_helpers import (
     get_passing_samples as _get_passing_samples,
     get_aligned_samples as _get_aligned_samples,
@@ -13,6 +14,13 @@ from checkpoint_helpers import (
     get_cluster_fastqs_for_sample as _get_cluster_fastqs_for_sample,
     get_all_cluster_fastqs as _get_all_cluster_fastqs,
     get_all_cluster_consensus_files as _get_all_cluster_consensus_files,
+)
+
+from common_helpers import (
+    get_sample_names,
+    build_nanofilt_params,
+    build_mafft_flags,
+    get_input_fastq_path,
 )
 
 # ==================== Configuration ====================
@@ -78,120 +86,10 @@ NANOFILT_MAX_LENGTH = config.get("filter", {}).get("max_length", 1700)
 HEADCROP = config.get("filter", {}).get("headcrop", 0)
 TAILCROP = config.get("filter", {}).get("tailcrop", 0)
 
-# ==================== Helper Functions ====================
-
-def get_sample_names(input_dir):
-    """
-    Scan input directory for FASTQ files and return list of sample names.
-    
-    Supports both .fastq and .fastq.gz extensions.
-    Sample name is the filename without extension(s).
-    
-    Args:
-        input_dir: Path object or string pointing to input directory
-        
-    Returns:
-        Sorted list of unique sample names
-        
-    Raises:
-        ValueError: If no FASTQ files found in directory
-    """
-    input_path = Path(input_dir)
-    sample_names = set()
-    
-    # Scan for .fastq files
-    for fastq_file in input_path.glob("*.fastq"):
-        sample_names.add(fastq_file.stem)
-    
-    # Scan for .fastq.gz files
-    for fastq_gz in input_path.glob("*.fastq.gz"):
-        # Remove .fastq.gz to get sample name
-        sample_name = fastq_gz.name.replace(".fastq.gz", "")
-        sample_names.add(sample_name)
-    
-    if not sample_names:
-        raise ValueError(f"No FASTQ files found in {input_path}")
-    
-    return sorted(sample_names)
-
-
-def build_nanofilt_params():
-    """
-    Build NanoFilt parameter string from config.
-    
-    Returns:
-        String of command-line arguments for NanoFilt
-    """
-    params = []
-    
-    if NANOFILT_MIN_QUALITY > 0:
-        params.append(f"-q {NANOFILT_MIN_QUALITY}")
-    
-    if NANOFILT_MIN_LENGTH > 0:
-        params.append(f"-l {NANOFILT_MIN_LENGTH}")
-    
-    if NANOFILT_MAX_LENGTH > 0:
-        params.append(f"--maxlength {NANOFILT_MAX_LENGTH}")
-    
-    return " ".join(params)
-
-# MAFFT algorithm flags
-def _build_mafft_flags(algorithm, gap_open=0, gap_extend=0):
-    """
-    Helper to build MAFFT flags from algorithm choice and gap penalties.
-    
-    Args:
-        algorithm: Algorithm choice ("auto", "ginsi", or "default" or "")
-        gap_open: Gap opening penalty (0 = use MAFFT defaults)
-        gap_extend: Gap extension penalty (0 = use MAFFT defaults)
-    
-    Returns:
-        String of MAFFT command-line flags
-    """
-    flags = []
-    
-    # Algorithm flags
-    if algorithm == "default" or algorithm == "":
-        pass  # No algorithm flag
-    elif algorithm == "auto":
-        flags.append("--auto")
-    elif algorithm == "ginsi":
-        flags.append("--globalpair --maxiterate 1000")
-    else:
-        raise ValueError(f"Unknown mafft_algorithm: {algorithm}. Must be 'auto' or 'ginsi'")
-    
-    # Gap penalty flags
-    if gap_open > 0:
-        flags.append(f"--op {gap_open}")
-    if gap_extend > 0:
-        flags.append(f"--ep {gap_extend}")
-    
-    return " ".join(flags)
+# ==================== Helper Functions (Wrappers) ====================
 
 def get_input_fastq(wildcards):
-    """
-    Get the input FASTQ file path for a sample.
-    
-    Checks for both .fastq and .fastq.gz extensions.
-    
-    Returns:
-        Path to the input FASTQ file
-    """
-    sample = wildcards.sample
-    
-    # Check for .fastq first
-    fastq_path = INPUT_DIR / f"{sample}.fastq"
-    if fastq_path.exists():
-        return str(fastq_path)
-    
-    # Check for .fastq.gz
-    fastq_gz_path = INPUT_DIR / f"{sample}.fastq.gz"
-    if fastq_gz_path.exists():
-        return str(fastq_gz_path)
-    
-    # If neither exists, return .fastq (will trigger error in rule)
-    return str(fastq_path)
-
+    return get_input_fastq_path(INPUT_DIR, wildcards.sample)
 
 # Wrapper functions for checkpoint helpers
 def get_passing_samples(wildcards):
@@ -247,20 +145,24 @@ def get_all_cluster_consensus_files(wildcards):
 ALL_SAMPLES = get_sample_names(INPUT_DIR)
 
 # Build NanoFilt parameters
-NANOFILT_PARAMS = build_nanofilt_params()
+NANOFILT_PARAMS = build_nanofilt_params(
+    min_quality=NANOFILT_MIN_QUALITY,
+    min_length=NANOFILT_MIN_LENGTH,
+    max_length=NANOFILT_MAX_LENGTH
+)
 
 # Build MAFFT flags for each alignment context
-MAFFT_ALIGN_FLAGS = _build_mafft_flags(
+MAFFT_ALIGN_FLAGS = build_mafft_flags(
     config.get("alignment", {}).get("mafft_algorithm", "default"),
     config.get("alignment", {}).get("gap_open", 0),
     config.get("alignment", {}).get("gap_extend", 0)
 )
-MAFFT_CLUSTER_ALIGN_FLAGS = _build_mafft_flags(
+MAFFT_CLUSTER_ALIGN_FLAGS = build_mafft_flags(
     config.get("cluster_alignment", {}).get("mafft_algorithm", "default"),
     config.get("cluster_alignment", {}).get("gap_open", 0),
     config.get("cluster_alignment", {}).get("gap_extend", 0)
 )
-MAFFT_MULTI_ALIGN_FLAGS = _build_mafft_flags(
+MAFFT_MULTI_ALIGN_FLAGS = build_mafft_flags(
     config.get("multi_alignment", {}).get("mafft_algorithm", "default"),
     config.get("multi_alignment", {}).get("gap_open", 0),
     config.get("multi_alignment", {}).get("gap_extend", 0)
