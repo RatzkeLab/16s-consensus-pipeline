@@ -34,6 +34,7 @@ FILTER_DIR = OUT_DIR / "01_filtered"
 SUBSAMPLE_DIR = OUT_DIR / "02_subsampled"
 ALIGNMENT_DIR = OUT_DIR / "03_alignment"
 NAIVE_CONSENSUS_DIR = OUT_DIR / "04_naive_consensus"
+PROFILE_DIR = OUT_DIR / "04b_read_profiles"
 CLUSTER_DETECTION_DIR = OUT_DIR / "05_cluster_detection"
 SPLIT_READS_DIR = OUT_DIR / "06_split_reads"
 CLUSTER_ALIGNMENT_DIR = OUT_DIR / "07_cluster_alignments"
@@ -81,7 +82,7 @@ PAIRWISE_DISTANCE_AUTO_TRIM = config.get("pairwise_distance", {}).get("auto_trim
 NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
 MULTI_DATABASE_FILE = OUT_DIR / config.get("multi_database_filename", "multi_db.fasta")
 PAIRWISE_DISTANCE_FILE = QC_DIR / config.get("pairwise_distance_filename", "pairwise_distances.tsv")
-MULTI_ALIGNMENT_FILE = QC_DIR / config.get("multi_alignment_filename", "all_consensus_alignment.fasta")
+QC_ALIGNMENT_FILE = QC_DIR / config.get("qc_alignment_filename", "consensus_qc_alignment.fasta")
 PAIRWISE_DISTANCE_MATRIX_FILE = QC_DIR / config.get("pairwise_distance_matrix_filename", "pairwise_distance_matrix.tsv")
 PAIRWISE_DISTANCE_HEATMAP_FILE = QC_DIR / config.get("pairwise_distance_heatmap_filename", "pairwise_distance_heatmap.png")
 PIPELINE_SUMMARY_FILE = QC_DIR / "pipeline_summary.md"
@@ -149,9 +150,9 @@ MAFFT_CLUSTER_ALIGN_FLAGS = build_mafft_flags(
     config.get("cluster_alignment", {}).get("gap_open", 0),
     config.get("cluster_alignment", {}).get("gap_extend", 0)
 )
-MAFFT_MULTI_ALIGN_FLAGS = build_mafft_flags(
-    config.get("multi_alignment", {}).get("mafft_algorithm", "default"),
-    config.get("multi_alignment", {}).get("gap_open", 0),
-    config.get("multi_alignment", {}).get("gap_extend", 0)
+MAFFT_QC_ALIGN_FLAGS = build_mafft_flags(
+    config.get("qc_alignment", {}).get("mafft_algorithm", "default"),
+    config.get("qc_alignment", {}).get("gap_open", 0),
+    config.get("qc_alignment", {}).get("gap_extend", 0)
 )
 
