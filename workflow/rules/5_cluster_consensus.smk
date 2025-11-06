@@ -112,9 +112,11 @@ rule profile_cluster_alignment:
     output:
         profile_tsv = CLUSTER_ALIGNMENT_PROFILES_DIR / "{sample}" / "{cluster}.tsv"
     params:
-        min_agreement = CLUSTER_ALIGN_QC_MIN_AGREEMENT,
+        min_minor_freq = CLUSTER_ALIGN_QC_MIN_MINOR_FREQ,
         trim_bp = CLUSTER_ALIGN_QC_TRIM_BP,
         auto_trim_flag = CLUSTER_ALIGN_QC_AUTO_TRIM_FLAG,
+        min_trim = CLUSTER_ALIGN_QC_MIN_TRIM,
+        max_trim = CLUSTER_ALIGN_QC_MAX_TRIM,
         compress_gaps_flag = CLUSTER_ALIGN_QC_COMPRESS_GAPS_FLAG,
     log:
         LOG_DIR / "profile_cluster_alignment" / "{sample}_{cluster}.log"
@@ -125,9 +127,11 @@ rule profile_cluster_alignment:
         python workflow/scripts/generate_profiles.py \
           {input.alignment} \
           {output.profile_tsv} \
-          --min_agreement {params.min_agreement} \
+          --min_minor_freq {params.min_minor_freq} \
           --trim_bp {params.trim_bp} \
           {params.auto_trim_flag} \
+          --min_trim {params.min_trim} \
+          --max_trim {params.max_trim} \
           {params.compress_gaps_flag} \
           2> {log}
         """

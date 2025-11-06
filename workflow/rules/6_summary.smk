@@ -100,9 +100,11 @@ rule profile_qc_alignment:
     output:
         profile_tsv = QC_ALIGNMENT_PROFILES_DIR / "qc_alignment_profiles.tsv"
     params:
-        min_agreement = QC_ALIGN_MIN_AGREEMENT,
+        min_minor_freq = QC_ALIGN_MIN_MINOR_FREQ,
         trim_bp = QC_ALIGN_TRIM_BP,
         auto_trim_flag = QC_ALIGN_AUTO_TRIM_FLAG,
+        min_trim = QC_ALIGN_MIN_TRIM,
+        max_trim = QC_ALIGN_MAX_TRIM,
         compress_gaps_flag = QC_ALIGN_COMPRESS_GAPS_FLAG,
     log:
         LOG_DIR / "summary" / "profile_qc_alignment.log"
@@ -113,9 +115,11 @@ rule profile_qc_alignment:
         python workflow/scripts/generate_profiles.py \
           {input.alignment} \
           {output.profile_tsv} \
-          --min_agreement {params.min_agreement} \
+          --min_minor_freq {params.min_minor_freq} \
           --trim_bp {params.trim_bp} \
           {params.auto_trim_flag} \
+          --min_trim {params.min_trim} \
+          --max_trim {params.max_trim} \
           {params.compress_gaps_flag} \
           2> {log}
         """

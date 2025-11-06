@@ -75,13 +75,17 @@ naive_consensus:
 
 # Settings for initial per-sample read profile generation used by cluster detection
 cluster_detection_profiles:
-  # Positions below this threshold are considered variable
-  min_agreement: 0.8
+  # Minimum frequency for second-most-common allele (positions above this are variable)
+  min_minor_freq: 0.05
   # Manual trim if auto_trim is false
   trim_bp: 70
   # Automatically trim based on longest leading/trailing gaps
   auto_trim: true
-  # Compress gap runs (continuation gaps marked as 'N') during profiling
+  # Minimum trim value - auto_trim cannot trim less than this
+  min_trim: 50
+  # Maximum trim value - auto_trim cannot trim more than this
+  max_trim: 250
+  # Compress gap runs (continuation gaps marked as '.') during profiling
   compress_gaps: false
 
 multi_consensus:

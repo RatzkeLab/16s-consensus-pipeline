@@ -81,34 +81,46 @@ MULTI_CONSENSUS_COMPRESS_GAPS_FLAG = "--compress_gaps" if MULTI_CONSENSUS_COMPRE
 # Initial per-sample cluster-detection profile generation parameters
 # (used by rule generate_profiles before clustering). Defaults fall back
 # to multi_consensus values for convenience.
-CLUSTER_DETECT_PROF_MIN_AGREEMENT = config.get("cluster_detection_profiles", {}).get(
-    "min_agreement", MULTI_CONSENSUS_MIN_AGREEMENT
+CLUSTER_DETECT_PROF_MIN_MINOR_FREQ = config.get("cluster_detection_profiles", {}).get(
+    "min_minor_freq", 0.05
 )
 CLUSTER_DETECT_PROF_TRIM_BP = config.get("cluster_detection_profiles", {}).get(
-    "trim_bp", MULTI_CONSENSUS_TRIM_BP
+    "trim_bp", 70
 )
 CLUSTER_DETECT_PROF_AUTO_TRIM = config.get("cluster_detection_profiles", {}).get(
-    "auto_trim", MULTI_CONSENSUS_AUTO_TRIM
+    "auto_trim", True
 )
 CLUSTER_DETECT_PROF_AUTO_TRIM_FLAG = "--auto_trim" if CLUSTER_DETECT_PROF_AUTO_TRIM else ""
+CLUSTER_DETECT_PROF_MIN_TRIM = config.get("cluster_detection_profiles", {}).get(
+    "min_trim", 50
+)
+CLUSTER_DETECT_PROF_MAX_TRIM = config.get("cluster_detection_profiles", {}).get(
+    "max_trim", 250
+)
 CLUSTER_DETECT_PROF_COMPRESS_GAPS = config.get("cluster_detection_profiles", {}).get(
-    "compress_gaps", MULTI_CONSENSUS_COMPRESS_GAPS
+    "compress_gaps", False
 )
 CLUSTER_DETECT_PROF_COMPRESS_GAPS_FLAG = "--compress_gaps" if CLUSTER_DETECT_PROF_COMPRESS_GAPS else ""
 
-# Cluster-alignment QC profiling parameters (defaults fall back to multi_consensus)
-CLUSTER_ALIGN_QC_MIN_AGREEMENT = config.get("cluster_alignment_qc", {}).get(
-    "min_agreement", MULTI_CONSENSUS_MIN_AGREEMENT
+# Cluster-alignment QC profiling parameters (defaults fall back to cluster_detection_profiles)
+CLUSTER_ALIGN_QC_MIN_MINOR_FREQ = config.get("cluster_alignment_qc", {}).get(
+    "min_minor_freq", CLUSTER_DETECT_PROF_MIN_MINOR_FREQ
 )
 CLUSTER_ALIGN_QC_TRIM_BP = config.get("cluster_alignment_qc", {}).get(
-    "trim_bp", MULTI_CONSENSUS_TRIM_BP
+    "trim_bp", CLUSTER_DETECT_PROF_TRIM_BP
 )
 CLUSTER_ALIGN_QC_AUTO_TRIM = config.get("cluster_alignment_qc", {}).get(
-    "auto_trim", MULTI_CONSENSUS_AUTO_TRIM
+    "auto_trim", CLUSTER_DETECT_PROF_AUTO_TRIM
 )
 CLUSTER_ALIGN_QC_AUTO_TRIM_FLAG = "--auto_trim" if CLUSTER_ALIGN_QC_AUTO_TRIM else ""
+CLUSTER_ALIGN_QC_MIN_TRIM = config.get("cluster_alignment_qc", {}).get(
+    "min_trim", CLUSTER_DETECT_PROF_MIN_TRIM
+)
+CLUSTER_ALIGN_QC_MAX_TRIM = config.get("cluster_alignment_qc", {}).get(
+    "max_trim", CLUSTER_DETECT_PROF_MAX_TRIM
+)
 CLUSTER_ALIGN_QC_COMPRESS_GAPS = config.get("cluster_alignment_qc", {}).get(
-    "compress_gaps", MULTI_CONSENSUS_COMPRESS_GAPS
+    "compress_gaps", CLUSTER_DETECT_PROF_COMPRESS_GAPS
 )
 CLUSTER_ALIGN_QC_COMPRESS_GAPS_FLAG = "--compress_gaps" if CLUSTER_ALIGN_QC_COMPRESS_GAPS else ""
 
@@ -127,18 +139,24 @@ CLUSTER_ALIGN_QC_MIN_VARIABLE_POSITIONS = config.get("cluster_alignment_qc", {})
 )
 
 # QC-alignment (all-consensus) profiling parameters (can be different defaults)
-QC_ALIGN_MIN_AGREEMENT = config.get("qc_alignment_qc", {}).get(
-    "min_agreement", MULTI_CONSENSUS_MIN_AGREEMENT
+QC_ALIGN_MIN_MINOR_FREQ = config.get("qc_alignment_qc", {}).get(
+    "min_minor_freq", CLUSTER_DETECT_PROF_MIN_MINOR_FREQ
 )
 QC_ALIGN_TRIM_BP = config.get("qc_alignment_qc", {}).get(
-    "trim_bp", MULTI_CONSENSUS_TRIM_BP
+    "trim_bp", CLUSTER_DETECT_PROF_TRIM_BP
 )
 QC_ALIGN_AUTO_TRIM = config.get("qc_alignment_qc", {}).get(
-    "auto_trim", MULTI_CONSENSUS_AUTO_TRIM
+    "auto_trim", CLUSTER_DETECT_PROF_AUTO_TRIM
 )
 QC_ALIGN_AUTO_TRIM_FLAG = "--auto_trim" if QC_ALIGN_AUTO_TRIM else ""
+QC_ALIGN_MIN_TRIM = config.get("qc_alignment_qc", {}).get(
+    "min_trim", CLUSTER_DETECT_PROF_MIN_TRIM
+)
+QC_ALIGN_MAX_TRIM = config.get("qc_alignment_qc", {}).get(
+    "max_trim", CLUSTER_DETECT_PROF_MAX_TRIM
+)
 QC_ALIGN_COMPRESS_GAPS = config.get("qc_alignment_qc", {}).get(
-    "compress_gaps", MULTI_CONSENSUS_COMPRESS_GAPS
+    "compress_gaps", CLUSTER_DETECT_PROF_COMPRESS_GAPS
 )
 QC_ALIGN_COMPRESS_GAPS_FLAG = "--compress_gaps" if QC_ALIGN_COMPRESS_GAPS else ""
 
