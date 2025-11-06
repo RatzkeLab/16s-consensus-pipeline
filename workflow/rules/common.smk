@@ -43,6 +43,7 @@ CLUSTER_CONSENSUS_DIR = OUT_DIR / "09_cluster_consensus"
 CLUSTER_ALIGNMENT_PROFILES_DIR = OUT_DIR / "08b_cluster_alignment_profiles"
 CLUSTER_ALIGNMENT_CLUSTER_VIZ_DIR = OUT_DIR / "08c_cluster_alignment_viz"
 QC_DIR = OUT_DIR / "10_qc"
+CLUSTER_DETECTION_VIZ_DIR = QC_DIR / "cluster_detection_viz"
 QC_ALIGNMENT_PROFILES_DIR = QC_DIR / "qc_alignment_profiles"
 QC_ALIGNMENT_CLUSTER_VIZ_DIR = QC_DIR / "qc_alignment_viz"
 LOG_DIR = OUT_DIR / "logs"
@@ -101,6 +102,9 @@ CLUSTER_DETECT_PROF_COMPRESS_GAPS = config.get("cluster_detection_profiles", {})
     "compress_gaps", False
 )
 CLUSTER_DETECT_PROF_COMPRESS_GAPS_FLAG = "--compress_gaps" if CLUSTER_DETECT_PROF_COMPRESS_GAPS else ""
+CLUSTER_DETECT_PROF_ENABLE_VIZ = config.get("cluster_detection_profiles", {}).get(
+    "enable_viz", True
+)
 
 # Cluster-alignment QC profiling parameters (defaults fall back to cluster_detection_profiles)
 CLUSTER_ALIGN_QC_MIN_MINOR_FREQ = config.get("cluster_alignment_qc", {}).get(

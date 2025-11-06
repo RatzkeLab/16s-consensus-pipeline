@@ -19,6 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.cluster.hierarchy import linkage, fcluster
+import numpy as np
 
 
 def read_profiles(profile_file):
@@ -140,6 +141,31 @@ def hierarchical_cluster(profiles, max_clusters=10):
     return list(clusters_dict.values()), Z, dist_matrix
 
 
+def compute_cut_height(Z, max_clusters: int = 10):
+    """Recompute the heuristic cut height and implied number of clusters from a linkage matrix.
+
+    Returns (cut_height: float, n_clusters: int). If no good gap is found, returns the last merge height and 1.
+    """
+    if Z is None or len(Z) == 0:
+        return 0.0, 1
+    merge_distances = Z[:, 2]
+    gaps = np.diff(merge_distances)
+    max_gap = -1.0
+    max_idx = -1
+    n = Z.shape[0] + 1
+    for i, g in enumerate(gaps):
+        num_clusters = n - i - 1
+        if 2 <= num_clusters <= max_clusters and g > max_gap:
+            max_gap = g
+            max_idx = i
+    if max_idx == -1:
+        # Fallback: no strong gap; treat as single cluster
+        return float(merge_distances[-1]) if len(merge_distances) else 0.0, 1
+    cut_height = merge_distances[max_idx] + (gaps[max_idx] / 2.0)
+    num_clusters = n - max_idx - 1
+    return float(cut_height), int(num_clusters)
+
+
 def plot_cluster_heatmap(dist_matrix, headers, linkage_matrix, outpath, cluster_assignments=None):
     """
     Plot a clustermap of the distance matrix.
@@ -199,10 +225,170 @@ def plot_cluster_heatmap(dist_matrix, headers, linkage_matrix, outpath, cluster_
         sys.stderr.write(f"Warning: Could not create clustermap: {e}\n")
 
 
+def profiles_to_numeric_matrix(headers, variable_positions, profiles):
+    """Convert categorical profiles to a numeric matrix and return a colormap/norm.
+
+    Returns (matrix (n_reads x n_positions), cmap, norm, legend_labels)
+    """
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+
+    symbols = ['A', 'C', 'G', 'T', '-', '.', 'N']
+    sym_index = {s: i for i, s in enumerate(symbols)}
+    unknown_idx = len(symbols)
+    n = len(headers)
+    m = len(variable_positions)
+    mat = np.zeros((n, m), dtype=int)
+    for i, h in enumerate(headers):
+        prof = profiles[h]
+        row = [sym_index.get(ch, unknown_idx) for ch in prof]
+        mat[i, :] = row
+    colors = [
+        "#1b9e77",  # A
+        "#d95f02",  # C
+        "#7570b3",  # G
+        "#e7298a",  # T
+        "#66a61e",  # - gap
+        "#bdbdbd",  # . gap-continue
+        "#aaaaaa",  # N
+        "#000000",  # unknown
+    ]
+    cmap = ListedColormap(colors)
+    norm = BoundaryNorm(np.arange(-0.5, len(colors) + 0.5), len(colors))
+    return mat, cmap, norm, symbols + ['?']
+
+
+def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, cut_height, out_png):
+    """Plot profile categorical clustermap with dendrogram and cut line."""
+    from matplotlib.patches import Patch
+    # Edge cases: no headers or no variable positions => trivial figure
+    if len(headers) == 0 or len(variable_positions) == 0:
+        try:
+            fig, ax = plt.subplots(figsize=(6, 2))
+            msg = "No reads to visualize" if len(headers) == 0 else "No variable positions to visualize"
+            ax.text(0.5, 0.5, msg, ha='center', va='center')
+            ax.axis('off')
+            out_path = Path(out_png)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(out_path, dpi=200, bbox_inches='tight')
+            plt.close(fig)
+            sys.stderr.write(f"Wrote trivial profiles viz to {out_path}\n")
+        except Exception as e:
+            sys.stderr.write(f"Warning: failed to write trivial profiles viz: {e}\n")
+        return
+
+    # Build numeric matrix safely
+    try:
+        mat, cmap, norm, legend_labels = profiles_to_numeric_matrix(headers, variable_positions, profiles)
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to build numeric matrix: {e}\n")
+        return
+    import pandas as pd
+    df = pd.DataFrame(mat, index=headers, columns=[f"pos_{p}" for p in variable_positions])
+
+    h, w = df.shape
+    if h == 0 or w == 0:
+        # Redundant guard, but protects against unexpected empty frames
+        fig, ax = plt.subplots(figsize=(6, 2))
+        ax.text(0.5, 0.5, "Empty profiles frame", ha='center', va='center')
+        ax.axis('off')
+        out_path = Path(out_png)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out_path, dpi=200, bbox_inches='tight')
+        plt.close(fig)
+        sys.stderr.write("Wrote empty profiles placeholder figure\n")
+        return
+
+    figsize = (max(6, min(18, 0.12 * w + 4)), max(6, min(18, 0.12 * h + 4)))
+
+    # Attempt clustermap; fall back to plain heatmap if it fails
+    g = None
+    try:
+        g = sns.clustermap(
+            df,
+            row_linkage=linkage_matrix if linkage_matrix is not None else None,
+            col_cluster=False,
+            cmap=cmap,
+            norm=norm,
+            xticklabels=True,
+            yticklabels=False,
+            figsize=figsize,
+            dendrogram_ratio=0.15,
+            cbar_pos=None,
+        )
+    except Exception as e:
+        sys.stderr.write(f"Warning: clustermap failed ({e}); falling back to imshow heatmap\n")
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.imshow(mat, aspect='auto', cmap=cmap, norm=norm, interpolation='nearest')
+        ax.set_xlabel('Variable positions')
+        ax.set_ylabel('Reads')
+        ax.set_title(f"Profiles heatmap (cut @ {cut_height:.2f})")
+        # Write fallback figure
+        out_path = Path(out_png)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out_path, dpi=200, bbox_inches='tight')
+        plt.close(fig)
+        sys.stderr.write(f"Wrote fallback heatmap to {out_path}\n")
+        return
+
+    # Adjust x-axis labels
+    try:
+        g.ax_heatmap.tick_params(axis='x', labelsize=max(4, min(8, 60 / max(w, 1))), rotation=90)
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to adjust x-axis labels: {e}\n")
+
+    # Overlay text labels on heatmap
+    try:
+        row_order = g.dendrogram_row.reordered_ind if (linkage_matrix is not None and hasattr(g, 'dendrogram_row')) else list(range(h))
+        fontsize = max(3, min(8, 50 / max(h, w, 1)))
+        for i in range(h):
+            for j in range(w):
+                orig_row_idx = row_order[i] if i < len(row_order) else i
+                if orig_row_idx >= len(headers):
+                    continue
+                prof = profiles[headers[orig_row_idx]]
+                letter = prof[j] if j < len(prof) else ''
+                g.ax_heatmap.text(j + 0.5, i + 0.5, letter,
+                                  ha="center", va="center",
+                                  color="white" if letter not in ['.', 'N'] else "black",
+                                  fontsize=fontsize,
+                                  weight='bold')
+    except Exception as e:
+        sys.stderr.write(f"Warning: could not overlay text labels: {e}\n")
+
+    title = f"Profiles heatmap with dendrogram (cut @ {cut_height:.2f})"
+    try:
+        g.ax_heatmap.set_title(title, pad=12)
+    except Exception:
+        pass
+    try:
+        if linkage_matrix is not None and cut_height > 0 and hasattr(g, 'ax_row_dendrogram'):
+            ax_d = g.ax_row_dendrogram
+            ax_d.axhline(y=cut_height, color='red', linestyle='--', linewidth=1.5, alpha=0.8)
+    except Exception as e:
+        sys.stderr.write(f"Warning: could not draw cut line on dendrogram: {e}\n")
+
+    # Legend for symbols
+    try:
+        handles = [Patch(facecolor=g.cmap(i), edgecolor='none') for i in range(len(legend_labels))]
+        g.fig.legend(handles, legend_labels, loc='upper right', title='Symbol', frameon=False)
+    except Exception:
+        pass
+
+    out_path = Path(out_png)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        plt.savefig(out_path, dpi=200, bbox_inches='tight')
+        plt.close()
+        sys.stderr.write(f"Wrote profile clustermap to {out_path}\n")
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to save clustermap: {e}\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Detect subclusters from read profiles")
     parser.add_argument("profile_file", help="Path to read_profiles.tsv file")
     parser.add_argument("outdir", help="Output directory")
+    parser.add_argument("--viz_out", help="Optional: output PNG path for profiles+dendrogram plot")
     parser.add_argument("--min_cluster_size", type=int, default=5,
                         help="Minimum absolute cluster size")
     parser.add_argument("--min_cluster_size_percent", type=float, default=0.0,
@@ -236,6 +422,17 @@ def main():
         with open(outdir / "no_clusters.txt", "w") as f:
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - insufficient variation\n")
+        # Even if no clustering, optionally plot a trivial figure explaining lack of variation
+        if args.viz_out:
+            try:
+                fig, ax = plt.subplots(figsize=(6, 2))
+                ax.text(0.5, 0.5, "No variable positions to visualize", ha='center', va='center')
+                ax.axis('off')
+                Path(args.viz_out).parent.mkdir(parents=True, exist_ok=True)
+                fig.savefig(args.viz_out, dpi=200, bbox_inches='tight')
+                plt.close(fig)
+            except Exception as e:
+                sys.stderr.write(f"Warning: failed to write trivial viz: {e}\n")
         return
     
     # Check if we have enough sequences for clustering
@@ -244,6 +441,17 @@ def main():
         with open(outdir / "no_clusters.txt", "w") as f:
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - single cluster\n")
+        # Optional trivial viz if requested
+        if args.viz_out:
+            try:
+                fig, ax = plt.subplots(figsize=(6, 2))
+                ax.text(0.5, 0.5, "Not enough reads to cluster", ha='center', va='center')
+                ax.axis('off')
+                Path(args.viz_out).parent.mkdir(parents=True, exist_ok=True)
+                fig.savefig(args.viz_out, dpi=200, bbox_inches='tight')
+                plt.close(fig)
+            except Exception as e:
+                sys.stderr.write(f"Warning: failed to write trivial viz: {e}\n")
         return
     
     # Cluster reads
@@ -263,21 +471,33 @@ def main():
     valid_clusters = [c for c in clusters if len(c) >= effective_min_size]
     sys.stderr.write(f"{len(valid_clusters)} clusters meet minimum size threshold\n")
     
+    # Persist lightweight artifacts and plot (no large linkage files on disk)
+    headers = list(profiles.keys())
+    ch, k = compute_cut_height(linkage_matrix, max_clusters=args.max_clusters)
+    try:
+        with open(outdir / "headers.txt", "w") as hf:
+            for h in headers:
+                hf.write(f"{h}\n")
+        with open(outdir / "cut_height.txt", "w") as cf:
+            cf.write(f"{ch}\n")
+        with open(outdir / "n_clusters_estimate.txt", "w") as nf:
+            nf.write(f"{k}\n")
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to persist clustering artifacts: {e}\n")
+
+    # Produce integrated visualization if requested
+    if args.viz_out:
+        try:
+            plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, ch, args.viz_out)
+        except Exception as e:
+            sys.stderr.write(f"Warning: failed to generate integrated viz: {e}\n")
     if len(valid_clusters) < 2:
         sys.stderr.write("Only one valid cluster - no subclustering\n")
         with open(outdir / "no_clusters.txt", "w") as f:
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - single cluster\n")
         
-        # Still plot heatmap for QC (even if no clusters)
-        if linkage_matrix is not None and dist_matrix is not None:
-            headers = list(profiles.keys())
-            plot_cluster_heatmap(
-                dist_matrix, 
-                headers, 
-                linkage_matrix, 
-                outdir / "cluster_heatmap.png"
-            )
+        # Still plot integrated profiles viz for QC (even if no clusters)
         return
     
     # Multiple clusters found - write cluster assignments
@@ -303,16 +523,7 @@ def main():
             label = cluster_labels[i] if i < len(cluster_labels) else str(i)
             f.write(f"{label}\t{len(cluster)}\n")
     
-    # Plot cluster heatmap with cluster annotations
-    if linkage_matrix is not None and dist_matrix is not None:
-        headers = list(profiles.keys())
-        plot_cluster_heatmap(
-            dist_matrix,
-            headers,
-            linkage_matrix,
-            outdir / "cluster_heatmap.png",
-            cluster_assignments
-        )
+    # Note: per-request, the primary visualization is the profiles heatmap, already generated above if viz_out set.
     
     sys.stderr.write("Cluster detection complete\n")
 

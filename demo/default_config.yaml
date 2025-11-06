@@ -87,6 +87,8 @@ cluster_detection_profiles:
   max_trim: 250
   # Compress gap runs (continuation gaps marked as '.') during profiling
   compress_gaps: false
+  # Enable generation of profile visualization plot with dendrogram and cut height (default: true)
+  enable_viz: true
 
 multi_consensus:
   # Minimum number of variable positions required to attempt clustering

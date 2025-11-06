@@ -85,26 +85,56 @@ rule detect_clusters:
         # Output directory will contain either:
         # - cluster_assignments.tsv (if clusters found)
         # - no_clusters.txt (if single cluster)
-        outdir=directory(CLUSTER_DETECTION_DIR / "{sample}")
+        outdir=directory(CLUSTER_DETECTION_DIR / "{sample}"),
+        viz_figure=CLUSTER_DETECTION_DIR / "{sample}" / "profiles_dendrogram.png" if CLUSTER_DETECT_PROF_ENABLE_VIZ else []
     params:
         min_cluster_size=MULTI_CONSENSUS_MIN_CLUSTER_SIZE,
         min_cluster_size_percent=MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters=MULTI_CONSENSUS_MAX_CLUSTERS,
         min_variable_positions=MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS,
+        enable_viz=CLUSTER_DETECT_PROF_ENABLE_VIZ,
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
     conda:
         "../envs/qc.yaml"
     shell:
         """
-        python workflow/scripts/cluster_from_profiles.py \
-          {input.profile_tsv} \
-          {output.outdir} \
-          --min_cluster_size {params.min_cluster_size} \
-          --min_cluster_size_percent {params.min_cluster_size_percent} \
-          --max_clusters {params.max_clusters} \
-          --min_variable_positions {params.min_variable_positions} \
-          2> {log}
+        if [ "{params.enable_viz}" = "True" ]; then
+            python workflow/scripts/cluster_from_profiles.py \
+              {input.profile_tsv} \
+              {output.outdir} \
+              --viz_out {output.viz_figure} \
+              --min_cluster_size {params.min_cluster_size} \
+              --min_cluster_size_percent {params.min_cluster_size_percent} \
+              --max_clusters {params.max_clusters} \
+              --min_variable_positions {params.min_variable_positions} \
+              2> {log}
+        else
+            python workflow/scripts/cluster_from_profiles.py \
+              {input.profile_tsv} \
+              {output.outdir} \
+              --min_cluster_size {params.min_cluster_size} \
+              --min_cluster_size_percent {params.min_cluster_size_percent} \
+              --max_clusters {params.max_clusters} \
+              --min_variable_positions {params.min_variable_positions} \
+              2> {log}
+        fi
+        """
+
+
+rule aggregate_cluster_detection_viz:
+    """
+    Aggregate rule to generate visualization for all aligned samples.
+    """
+    input:
+        lambda w: [CLUSTER_DETECTION_DIR / s / "profiles_dendrogram.png" for s in get_aligned_samples(w)]
+    output:
+        touch(QC_DIR / "cluster_detection_viz_complete.txt")
+    log:
+        LOG_DIR / "aggregate" / "cluster_detection_viz.log"
+    shell:
+        """
+        echo "Generated cluster detection profile plots for $(echo {input} | wc -w) samples" > {log}
         """
 
 
