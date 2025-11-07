@@ -83,83 +83,39 @@ rule qc_alignment:
         mafft {params.mafft_flags} --thread {threads} {input.multi_db} > {output.alignment} 2> {log}
         """
 
-
-rule profile_qc_alignment:
+rule global_consensus:
     """
-    Generate profiles from the final QC alignment of all consensus sequences.
+    Generate a global consensus sequence from all consensus sequences.
     
-    Upstream: rule qc_alignment
-    Downstream: rule visualize_qc_alignment
+    Upstream: cluster_consensus.smk (rule pool_multi)
+    Downstream: None (analysis output)
     
-    Creates profiles for each consensus sequence in the QC alignment to
-    identify variable positions across all samples and prepare for
-    clustering visualization.
+    Creates a single consensus sequence representing the most common
+    base at each position across all consensus sequences in the multi
+    database. Useful for overall QC and reference.
     """
     input:
-        alignment = QC_ALIGNMENT_FILE
+        global_alignment = QC_ALIGNMENT_FILE
     output:
-        profile_tsv = QC_ALIGNMENT_PROFILES_DIR / "qc_alignment_profiles.tsv"
+        fasta = QC_DIR / "global_consensus.fasta",
+        variants = QC_DIR / "global_consensus_variants.tsv"
     params:
-        min_minor_freq = QC_ALIGN_MIN_MINOR_FREQ,
-        trim_bp = QC_ALIGN_TRIM_BP,
-        auto_trim_flag = QC_ALIGN_AUTO_TRIM_FLAG,
-        min_trim = QC_ALIGN_MIN_TRIM,
-        max_trim = QC_ALIGN_MAX_TRIM,
-        compress_gaps_flag = QC_ALIGN_COMPRESS_GAPS_FLAG,
+        sample = "global_consensus",
+        min_prop = GLOBAL_CONSENSUS_MIN_PROP
     log:
-        LOG_DIR / "summary" / "profile_qc_alignment.log"
+        LOG_DIR / "summary" / "global_consensus.log"
     conda:
         "../envs/qc.yaml"
     shell:
         """
-        python workflow/scripts/generate_profiles.py \
-          {input.alignment} \
-          {output.profile_tsv} \
-          --min_minor_freq {params.min_minor_freq} \
-          --trim_bp {params.trim_bp} \
-          {params.auto_trim_flag} \
-          --min_trim {params.min_trim} \
-          --max_trim {params.max_trim} \
-          {params.compress_gaps_flag} \
-          2> {log}
-        """
-
-
-rule visualize_qc_alignment:
-    """
-    Cluster and visualize all consensus sequences for final QC.
-    
-    Upstream: rule profile_qc_alignment
-    Downstream: None (QC output)
-    
-    Generates hierarchical clustering and heatmap visualization of all
-    consensus sequences to show:
-    - Which samples are most similar
-    - Whether distinct groups/species exist
-    - Overall sequence diversity
-    """
-    input:
-        profile_tsv = QC_ALIGNMENT_PROFILES_DIR / "qc_alignment_profiles.tsv"
-    output:
-        outdir = directory(QC_ALIGNMENT_CLUSTER_VIZ_DIR)
-    params:
-        min_cluster_size = QC_ALIGN_VIZ_MIN_CLUSTER_SIZE,  # For QC, allow single-sample clusters
-        min_cluster_size_percent = QC_ALIGN_VIZ_MIN_CLUSTER_SIZE_PERCENT,
-        max_clusters = QC_ALIGN_VIZ_MAX_CLUSTERS,  # Allow more clusters since this is cross-sample
-        min_variable_positions = QC_ALIGN_VIZ_MIN_VARIABLE_POSITIONS,  # Lower threshold for final QC
-    log:
-        LOG_DIR / "summary" / "visualize_qc_alignment.log"
-    conda:
-        "../envs/qc.yaml"
-    shell:
-        """
-        python workflow/scripts/cluster_from_profiles.py \
-          {input.profile_tsv} \
-          {output.outdir} \
-          --min_cluster_size {params.min_cluster_size} \
-          --min_cluster_size_percent {params.min_cluster_size_percent} \
-          --max_clusters {params.max_clusters} \
-          --min_variable_positions {params.min_variable_positions} \
+        mkdir -p "$(dirname {output.fasta})"
+        
+        python workflow/scripts/naive_consensus.py \
+          {input.global_alignment} \
+          {output.fasta} \
+          {output.variants} \
+          {params.sample} \
+          {params.min_prop} \
           2> {log}
         """
 

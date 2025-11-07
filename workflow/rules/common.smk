@@ -135,6 +135,8 @@ PAIRWISE_DISTANCE_MATRIX_FILE = QC_DIR / config.get("pairwise_distance_matrix_fi
 PAIRWISE_DISTANCE_HEATMAP_FILE = QC_DIR / config.get("pairwise_distance_heatmap_filename", "pairwise_distance_heatmap.png")
 PIPELINE_SUMMARY_FILE = QC_DIR / "pipeline_summary.md"
 
+GLOBAL_CONSENSUS_MIN_PROP = .4
+
 # ==================== Helper Functions (Wrappers) ====================
 # See common_helpers.py for base functions
 # See checkpoint_helpers.py for checkpoint-specific functions

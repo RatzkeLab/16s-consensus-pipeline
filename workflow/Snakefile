@@ -33,6 +33,7 @@ rule all:
         QC_ALIGNMENT_CLUSTER_VIZ_DIR,
         QC_DIR / "cluster_detection_viz_complete.txt",
         # Summary report
-        PIPELINE_SUMMARY_FILE
+        PIPELINE_SUMMARY_FILE,
+        QC_DIR / "global_consensus.fasta"
     default_target: True
 
