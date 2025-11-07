@@ -93,33 +93,22 @@ rule detect_clusters:
         min_cluster_size_percent=CLUSTERING_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters=CLUSTERING_MAX_CLUSTERS,
         min_variable_positions=CLUSTERING_MIN_VARIABLE_POSITIONS,
-        enable_viz=PROFILE_GEN_ENABLE_VIZ,
+        viz_flag=lambda wildcards, output: _viz_flag(PROFILE_GEN_ENABLE_VIZ, output.viz_figure[0]) if PROFILE_GEN_ENABLE_VIZ else "",
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
     conda:
         "../envs/qc.yaml"
     shell:
         """
-        if [ "{params.enable_viz}" = "True" ]; then
-            python workflow/scripts/cluster_from_profiles.py \
-              {input.profile_tsv} \
-              {output.outdir} \
-              --viz_out {output.viz_figure} \
-              --min_cluster_size {params.min_cluster_size} \
-              --min_cluster_size_percent {params.min_cluster_size_percent} \
-              --max_clusters {params.max_clusters} \
-              --min_variable_positions {params.min_variable_positions} \
-              2> {log}
-        else
-            python workflow/scripts/cluster_from_profiles.py \
-              {input.profile_tsv} \
-              {output.outdir} \
-              --min_cluster_size {params.min_cluster_size} \
-              --min_cluster_size_percent {params.min_cluster_size_percent} \
-              --max_clusters {params.max_clusters} \
-              --min_variable_positions {params.min_variable_positions} \
-              2> {log}
-        fi
+        python workflow/scripts/cluster_from_profiles.py \
+          {input.profile_tsv} \
+          {output.outdir} \
+          {params.viz_flag} \
+          --min_cluster_size {params.min_cluster_size} \
+          --min_cluster_size_percent {params.min_cluster_size_percent} \
+          --max_clusters {params.max_clusters} \
+          --min_variable_positions {params.min_variable_positions} \
+          2> {log}
         """
 
 # ==================== Split Reads by Cluster ====================

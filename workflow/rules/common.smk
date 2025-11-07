@@ -188,6 +188,10 @@ def _bool_flag(enabled, flag: str):
     """Return flag string if enabled else empty string."""
     return flag if enabled else ""
 
+def _viz_flag(enabled, output_path):
+    """Return --viz_out flag with path if enabled, else empty string."""
+    return f"--viz_out {output_path}" if enabled else ""
+
 # Per-read profile generation flags
 PROFILE_GEN_AUTO_TRIM_FLAG = _bool_flag(PROFILE_GEN_AUTO_TRIM, "--auto_trim")
 PROFILE_GEN_COMPRESS_GAPS_FLAG = _bool_flag(PROFILE_GEN_COMPRESS_GAPS, "--compress_gaps")
