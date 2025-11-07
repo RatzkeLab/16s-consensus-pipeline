@@ -3,13 +3,48 @@ Cluster-based consensus generation rules for the 16S consensus pipeline.
 
 This module handles consensus calling for samples that have been split into
 multiple clusters (representing different strains/variants):
-1. Generate consensus for each individual cluster
-2. Pool all cluster consensuses into a single database FASTA
+1. Re-align the split reads for each cluster
+2. Generate consensus for each individual cluster
+3. Pool all cluster consensuses into a single database FASTA
 
 Pipeline position: FIFTH stage (parallel to naive_consensus.smk)
-Upstream: clustering.smk (rule realign_cluster)
-Downstream: summary.smk (rule generate_summary)
+Upstream: 4_clustering.smk (rule realign_cluster)
+Downstream: 6_summary.smk (rule generate_summary)
 """
+
+# ==================== Realign Clusters ====================
+
+rule realign_cluster:
+    """
+    Align reads for a specific cluster using MAFFT.
+    
+    Upstream: checkpoint split_reads (dynamically for each cluster)
+    Downstream: multi_consensus.smk (rule cluster_consensus)
+    
+    After reads are split by cluster, each cluster is aligned separately
+    to produce more accurate cluster-specific alignments. This improves
+    consensus quality by avoiding cross-contamination between variants.
+    
+    Input: FASTQ file for a single cluster (or all reads if no clusters detected)
+    Output: Aligned FASTA file for that cluster
+    """
+    input:
+        fastq = SPLIT_READS_DIR / "{sample}" / "{cluster}.fastq"
+    output:
+        fasta = CLUSTER_ALIGNMENT_DIR / "{sample}" / "{cluster}.fasta"
+    log:
+        LOG_DIR / "realign_cluster" / "{sample}_{cluster}.log"
+    conda:
+        "../envs/align.yaml"
+    params:
+        mafft_flags=MAFFT_CLUSTER_ALIGN_FLAGS
+    shell:
+        """
+        seqkit fq2fa {input.fastq} 2>> {log} | \
+        mafft {params.mafft_flags} --thread 1 - > {output.fasta} 2>> {log}
+        """
+
+
 
 # ==================== Per-Cluster Consensus Generation ====================
 

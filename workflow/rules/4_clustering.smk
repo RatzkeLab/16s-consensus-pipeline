@@ -4,11 +4,10 @@ Cluster detection: detect and split multiple strains/variants within samples.
 1. Generate per-read profiles from alignment based on variable positions
 2. Detect subclusters using hierarchical clustering on profiles
 3. Split reads by cluster assignment into separate FASTQ files (checkpoint)
-4. Create new sequence alignments for each split cluster of reads
 
-Pipeline position: FOURTH stage (parallel to naive_consensus.smk)
+Pipeline position: FOURTH stage (parallel to 3_naive_consensus.smk)
 Upstream: 2_align.smk (rule initial_alignment)
-Downstream: multi_consensus.smk (rule cluster_consensus)
+Downstream: 5_cluster_consensus.smk (rule cluster_consensus)
 """
 
 # ==================== Profile Generation ====================
@@ -121,23 +120,6 @@ rule detect_clusters:
         fi
         """
 
-
-rule aggregate_cluster_detection_viz:
-    """
-    Aggregate rule to generate visualization for all aligned samples.
-    """
-    input:
-        lambda w: [CLUSTER_DETECTION_DIR / s / "profiles_dendrogram.png" for s in get_aligned_samples(w)]
-    output:
-        touch(QC_DIR / "cluster_detection_viz_complete.txt")
-    log:
-        LOG_DIR / "aggregate" / "cluster_detection_viz.log"
-    shell:
-        """
-        echo "Generated cluster detection profile plots for $(echo {input} | wc -w) samples" > {log}
-        """
-
-
 # ==================== Split Reads by Cluster ====================
 
 checkpoint split_reads:
@@ -176,37 +158,3 @@ checkpoint split_reads:
           {params.sample} \
           2> {log}
         """
-
-
-# ==================== Realign Clusters ====================
-
-rule realign_cluster:
-    """
-    Align reads for a specific cluster using MAFFT.
-    
-    Upstream: checkpoint split_reads (dynamically for each cluster)
-    Downstream: multi_consensus.smk (rule cluster_consensus)
-    
-    After reads are split by cluster, each cluster is aligned separately
-    to produce more accurate cluster-specific alignments. This improves
-    consensus quality by avoiding cross-contamination between variants.
-    
-    Input: FASTQ file for a single cluster (or all reads if no clusters detected)
-    Output: Aligned FASTA file for that cluster
-    """
-    input:
-        fastq = SPLIT_READS_DIR / "{sample}" / "{cluster}.fastq"
-    output:
-        fasta = CLUSTER_ALIGNMENT_DIR / "{sample}" / "{cluster}.fasta"
-    log:
-        LOG_DIR / "realign_cluster" / "{sample}_{cluster}.log"
-    conda:
-        "../envs/align.yaml"
-    params:
-        mafft_flags=MAFFT_CLUSTER_ALIGN_FLAGS
-    shell:
-        """
-        seqkit fq2fa {input.fastq} 2>> {log} | \
-        mafft {params.mafft_flags} --thread 1 - > {output.fasta} 2>> {log}
-        """
-
