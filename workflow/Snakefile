@@ -29,9 +29,6 @@ rule all:
         # Analysis outputs
         PAIRWISE_DISTANCE_HEATMAP_FILE,
         QC_ALIGNMENT_FILE,
-        # QC visualizations
-        QC_ALIGNMENT_CLUSTER_VIZ_DIR,
-        QC_DIR / "cluster_detection_viz_complete.txt",
         # Summary report
         PIPELINE_SUMMARY_FILE,
         QC_DIR / "global_consensus.fasta"
