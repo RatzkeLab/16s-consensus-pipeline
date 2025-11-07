@@ -64,17 +64,18 @@ initial_alignment:
   gap_extend: 0
   
 
-
 # ==================== Consensus ====================
 
 naive_consensus:
-  # Minimum proportion required for winner-takes-all (0.6 = 60%)
   # Below this threshold, all variants at position are recorded
   # in the default mode, the plurality vote is then taken (no wobble bases)
-  min_consensus_proportion: 0.6
+  record_variants_below: 0.6
+
+
+# ==================== Clustering ====================
 
 # Settings for initial per-sample read profile generation used by cluster detection
-cluster_detection_profiles:
+per_read_profile_generation:
   # Minimum frequency for second-most-common allele (positions above this are variable)
   min_minor_freq: 0.05
   # Manual trim if auto_trim is false
@@ -90,49 +91,28 @@ cluster_detection_profiles:
   # Enable generation of profile visualization plot with dendrogram and cut height (default: true)
   enable_viz: true
 
-multi_consensus:
+clustering_algorithm:
   # Minimum number of variable positions required to attempt clustering
   # If fewer positions are variable than this value, clustering/splitting will be skipped
   min_variable_positions: 3
-
-  # Automatically calculate trim values based on longest leading/trailing gaps
-  # If true, trim_bp is ignored
-  auto_trim: false
-
-  # Number of bp to ignore at start and end of alignment when detecting clusters
-  # (reduces noise from alignment artifacts at ends)
-  # Only used if auto_trim is false
-  trim_bp: 70
-
-  # Compress gap runs when creating profiles for clustering
-  # Marks continuation gaps with 'N' to reduce weight of long gaps
-  # (reduces impact of Nanopore skipping artifacts while still penalizing gap events)
-  compress_gaps: false
-
-  # Minimum proportion for majority agreement at a position (0.8 = 80%)
-  # Positions below this threshold are used for clustering
-  min_agreement: 0.8
   
   # Minimum number of reads required to form a separate cluster (absolute)
-  min_cluster_size: 5
-  
   # Minimum cluster size as percentage of total reads (0-100)
-  # Whichever is larger (absolute or percent) will be used
+  # Whichever is larger (absolute or percent) (stricter of the two) will be used
   # Set to 0 to only use absolute min_cluster_size
+  min_cluster_size: 5
   min_cluster_size_percent: 5.0
   
   # Maximum number of clusters to consider
   # Hierarchical clustering will automatically find optimal number up to this limit
   max_clusters: 10
 
-  # Minimum proportion required for winner-takes-all (0.6 = 60%)
-  # Below this threshold, all variants at position are recorded
-  min_consensus_proportion: 0.6
+  min_gap_height: 0.05  # Minimum gap height for cutting dendrogram
+  min_sillhouette: 0.1  # Minimum silhouette score for accepting clusters
 
+# ==================== Cluster realignment and consensuss ====================
 
-# ==================== Cluster realignment (after splitting) ====================
-
-cluster_alignment:
+secondary_alignment:
   # MAFFT algorithm for cluster realignment
   # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
   mafft_algorithm: "ginsi"
@@ -141,18 +121,10 @@ cluster_alignment:
   # Gap extension penalty (0 = use MAFFT defaults)
   gap_extend: 0
 
-
-
-## ==================== QC alignment of final consensus sequences ====================
-
-qc_alignment:
-  # MAFFT algorithm for final multi-consensus alignment
-  # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
-  mafft_algorithm: "default"
-  # Gap opening penalty (0 = use MAFFT defaults)
-  gap_open: 0
-  # Gap extension penalty (0 = use MAFFT defaults)
-  gap_extend: 0
+cluster_consensus:
+  # Below this threshold, all variants at position are recorded for reference
+  # in the default mode, the plurality vote is then taken (no wobble bases)
+  record_variants_below: 0.6
 
 
 ## ==================== Output Report ====================
@@ -172,30 +144,13 @@ pairwise_distance:
   ignore_last_n_bp: 70
 
 
-# ==================== QC Profiling & Visualization ====================
+## ==================== QC alignment of final consensus sequences ====================
 
-# Parameters for profiling and clustering QC on cluster alignments
-cluster_alignment_qc:
-  # Profiling parameters (used by generate_profiles.py on cluster alignments)
-  min_agreement: 0.8        # shares default with multi_consensus
-  trim_bp: 70               # shares default with multi_consensus
-  auto_trim: false          # shares default with multi_consensus
-  compress_gaps: false      # shares default with multi_consensus
-  # Visualization / clustering parameters over profiles
-  min_cluster_size: 5       # shares default with multi_consensus
-  min_cluster_size_percent: 5.0
-  max_clusters: 10
-  min_variable_positions: 3
-
-# Parameters for profiling and clustering QC on the final QC alignment
-qc_alignment_qc:
-  # Profiling parameters for QC alignment of all consensus sequences
-  min_agreement: 0.8
-  trim_bp: 70
-  auto_trim: true
-  compress_gaps: false
-  # Visualization / clustering parameters for QC alignment (more permissive)
-  min_cluster_size: 1
-  min_cluster_size_percent: 0.0
-  max_clusters: 20
-  min_variable_positions: 1
+qc_alignment:
+  # MAFFT algorithm for final multi-consensus alignment
+  # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
+  mafft_algorithm: "default"
+  # Gap opening penalty (0 = use MAFFT defaults)
+  gap_open: 0
+  # Gap extension penalty (0 = use MAFFT defaults)
+  gap_extend: 0

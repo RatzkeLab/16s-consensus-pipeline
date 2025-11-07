@@ -106,27 +106,6 @@ CLUSTER_DETECT_PROF_ENABLE_VIZ = config.get("cluster_detection_profiles", {}).ge
     "enable_viz", True
 )
 
-# Cluster-alignment QC profiling parameters (defaults fall back to cluster_detection_profiles)
-CLUSTER_ALIGN_QC_MIN_MINOR_FREQ = config.get("cluster_alignment_qc", {}).get(
-    "min_minor_freq", CLUSTER_DETECT_PROF_MIN_MINOR_FREQ
-)
-CLUSTER_ALIGN_QC_TRIM_BP = config.get("cluster_alignment_qc", {}).get(
-    "trim_bp", CLUSTER_DETECT_PROF_TRIM_BP
-)
-CLUSTER_ALIGN_QC_AUTO_TRIM = config.get("cluster_alignment_qc", {}).get(
-    "auto_trim", CLUSTER_DETECT_PROF_AUTO_TRIM
-)
-CLUSTER_ALIGN_QC_AUTO_TRIM_FLAG = "--auto_trim" if CLUSTER_ALIGN_QC_AUTO_TRIM else ""
-CLUSTER_ALIGN_QC_MIN_TRIM = config.get("cluster_alignment_qc", {}).get(
-    "min_trim", CLUSTER_DETECT_PROF_MIN_TRIM
-)
-CLUSTER_ALIGN_QC_MAX_TRIM = config.get("cluster_alignment_qc", {}).get(
-    "max_trim", CLUSTER_DETECT_PROF_MAX_TRIM
-)
-CLUSTER_ALIGN_QC_COMPRESS_GAPS = config.get("cluster_alignment_qc", {}).get(
-    "compress_gaps", CLUSTER_DETECT_PROF_COMPRESS_GAPS
-)
-CLUSTER_ALIGN_QC_COMPRESS_GAPS_FLAG = "--compress_gaps" if CLUSTER_ALIGN_QC_COMPRESS_GAPS else ""
 
 # Cluster-alignment QC visualization clustering parameters
 CLUSTER_ALIGN_QC_MIN_CLUSTER_SIZE = config.get("cluster_alignment_qc", {}).get(
@@ -140,42 +119,6 @@ CLUSTER_ALIGN_QC_MAX_CLUSTERS = config.get("cluster_alignment_qc", {}).get(
 )
 CLUSTER_ALIGN_QC_MIN_VARIABLE_POSITIONS = config.get("cluster_alignment_qc", {}).get(
     "min_variable_positions", MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS
-)
-
-# QC-alignment (all-consensus) profiling parameters (can be different defaults)
-QC_ALIGN_MIN_MINOR_FREQ = config.get("qc_alignment_qc", {}).get(
-    "min_minor_freq", CLUSTER_DETECT_PROF_MIN_MINOR_FREQ
-)
-QC_ALIGN_TRIM_BP = config.get("qc_alignment_qc", {}).get(
-    "trim_bp", CLUSTER_DETECT_PROF_TRIM_BP
-)
-QC_ALIGN_AUTO_TRIM = config.get("qc_alignment_qc", {}).get(
-    "auto_trim", CLUSTER_DETECT_PROF_AUTO_TRIM
-)
-QC_ALIGN_AUTO_TRIM_FLAG = "--auto_trim" if QC_ALIGN_AUTO_TRIM else ""
-QC_ALIGN_MIN_TRIM = config.get("qc_alignment_qc", {}).get(
-    "min_trim", CLUSTER_DETECT_PROF_MIN_TRIM
-)
-QC_ALIGN_MAX_TRIM = config.get("qc_alignment_qc", {}).get(
-    "max_trim", CLUSTER_DETECT_PROF_MAX_TRIM
-)
-QC_ALIGN_COMPRESS_GAPS = config.get("qc_alignment_qc", {}).get(
-    "compress_gaps", CLUSTER_DETECT_PROF_COMPRESS_GAPS
-)
-QC_ALIGN_COMPRESS_GAPS_FLAG = "--compress_gaps" if QC_ALIGN_COMPRESS_GAPS else ""
-
-# QC-alignment visualization clustering parameters (more permissive defaults)
-QC_ALIGN_VIZ_MIN_CLUSTER_SIZE = config.get("qc_alignment_qc", {}).get(
-    "min_cluster_size", 1
-)
-QC_ALIGN_VIZ_MIN_CLUSTER_SIZE_PERCENT = config.get("qc_alignment_qc", {}).get(
-    "min_cluster_size_percent", 0.0
-)
-QC_ALIGN_VIZ_MAX_CLUSTERS = config.get("qc_alignment_qc", {}).get(
-    "max_clusters", 20
-)
-QC_ALIGN_VIZ_MIN_VARIABLE_POSITIONS = config.get("qc_alignment_qc", {}).get(
-    "min_variable_positions", 1
 )
 
 # Pairwise distance parameters
