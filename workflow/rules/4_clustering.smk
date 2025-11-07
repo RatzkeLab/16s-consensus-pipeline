@@ -35,12 +35,14 @@ rule generate_profiles:
     output:
         profile_tsv=PROFILE_DIR / "{sample}.tsv"
     params:
-        min_minor_freq=CLUSTER_DETECT_PROF_MIN_MINOR_FREQ,
-        trim_bp=CLUSTER_DETECT_PROF_TRIM_BP,
-        auto_trim_flag=CLUSTER_DETECT_PROF_AUTO_TRIM_FLAG,
-        min_trim=CLUSTER_DETECT_PROF_MIN_TRIM,
-        max_trim=CLUSTER_DETECT_PROF_MAX_TRIM,
-        compress_gaps_flag=CLUSTER_DETECT_PROF_COMPRESS_GAPS_FLAG,
+        min_minor_freq=PROFILE_GEN_MIN_MINOR_FREQ,
+        trim_bp=PROFILE_GEN_TRIM_BP,
+        auto_trim=PROFILE_GEN_AUTO_TRIM,
+        auto_trim_flag=PROFILE_GEN_AUTO_TRIM_FLAG,
+        min_trim=PROFILE_GEN_MIN_TRIM,
+        max_trim=PROFILE_GEN_MAX_TRIM,
+        compress_gaps=PROFILE_GEN_COMPRESS_GAPS,
+        compress_gaps_flag=PROFILE_GEN_COMPRESS_GAPS_FLAG,
     log:
         LOG_DIR / "generate_profiles" / "{sample}.log"
     conda:
@@ -85,13 +87,13 @@ rule detect_clusters:
         # - cluster_assignments.tsv (if clusters found)
         # - no_clusters.txt (if single cluster)
         outdir=directory(CLUSTER_DETECTION_DIR / "{sample}"),
-        viz_figure=CLUSTER_DETECTION_DIR / "{sample}" / "profiles_dendrogram.png" if CLUSTER_DETECT_PROF_ENABLE_VIZ else []
+        viz_figure=CLUSTER_DETECTION_DIR / "{sample}" / "profiles_dendrogram.png" if PROFILE_GEN_ENABLE_VIZ else []
     params:
-        min_cluster_size=MULTI_CONSENSUS_MIN_CLUSTER_SIZE,
-        min_cluster_size_percent=MULTI_CONSENSUS_MIN_CLUSTER_SIZE_PERCENT,
-        max_clusters=MULTI_CONSENSUS_MAX_CLUSTERS,
-        min_variable_positions=MULTI_CONSENSUS_MIN_VARIABLE_POSITIONS,
-        enable_viz=CLUSTER_DETECT_PROF_ENABLE_VIZ,
+        min_cluster_size=CLUSTERING_MIN_CLUSTER_SIZE,
+        min_cluster_size_percent=CLUSTERING_MIN_CLUSTER_SIZE_PERCENT,
+        max_clusters=CLUSTERING_MAX_CLUSTERS,
+        min_variable_positions=CLUSTERING_MIN_VARIABLE_POSITIONS,
+        enable_viz=PROFILE_GEN_ENABLE_VIZ,
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
     conda:

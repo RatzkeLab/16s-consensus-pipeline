@@ -37,7 +37,7 @@ rule realign_cluster:
     conda:
         "../envs/align.yaml"
     params:
-        mafft_flags=MAFFT_CLUSTER_ALIGN_FLAGS
+        mafft_flags=MAFFT_SECONDARY_ALIGN_FLAGS
     shell:
         """
         seqkit fq2fa {input.fastq} 2>> {log} | \
@@ -69,7 +69,7 @@ rule cluster_consensus:
         variants = CLUSTER_CONSENSUS_DIR / "{sample}" / "{cluster}_variants.tsv"
     params:
         sample = lambda w: f"{w.sample}_{w.cluster}",
-        min_prop = MULTI_CONSENSUS_MIN_PROP
+        record_variants_below = CLUSTER_CONSENSUS_RECORD_VARIANTS_BELOW
     log:
         LOG_DIR / "cluster_consensus" / "{sample}_{cluster}.log"
     conda:
@@ -83,7 +83,7 @@ rule cluster_consensus:
           {output.fasta} \
           {output.variants} \
           {params.sample} \
-          {params.min_prop} \
+          {params.record_variants_below} \
           2> {log}
         """
 

@@ -31,7 +31,7 @@ rule naive_consensus:
         variants=NAIVE_CONSENSUS_DIR / "{sample}_variants.tsv"
     params:
         sample="{sample}",
-        min_prop=NAIVE_CONSENSUS_MIN_PROP
+        record_variants_below=NAIVE_CONSENSUS_RECORD_VARIANTS_BELOW
     log:
         LOG_DIR / "naive_consensus" / "{sample}.log"
     conda:
@@ -45,7 +45,7 @@ rule naive_consensus:
           {output.fasta} \
           {output.variants} \
           {params.sample} \
-          {params.min_prop} \
+          {params.record_variants_below} \
           2> {log}
         """
 

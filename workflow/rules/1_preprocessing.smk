@@ -151,8 +151,8 @@ rule filter_reads:
         fastq=FILTER_DIR / "{sample}.fastq"
     params:
         nanofilt_params=NANOFILT_PARAMS,
-        headcrop=HEADCROP,
-        tailcrop=TAILCROP,
+        headcrop=FILTER_HEADCROP,
+        tailcrop=FILTER_TAILCROP,
         sample="{sample}"
     log:
         LOG_DIR / "filter" / "{sample}.log"
