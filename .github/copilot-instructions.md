@@ -4,6 +4,7 @@ this is a snakemake 9 pipeline that runs per sample given by the user, aggrigati
 use snakemake 9 best practices
 use snakemake 9 syntax
 avoid lambdas in rule inputs, rather put functions in common.smk
+if flags are needed for the bash script, build flag strings in common.smk, where possible
 rules are found in workflow/rules
 scripts (including python) are found in workflow/scripts
 workflow/Snakefile is the main snakemake file
