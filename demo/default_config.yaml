@@ -70,6 +70,13 @@ naive_consensus:
   # Below this threshold, all variants at position are recorded
   # in the default mode, the plurality vote is then taken (no wobble bases)
   record_variants_below: 0.6
+  
+  
+# ==================== QC Consensus Generation ====================
+
+global_consensus:
+  # Minimum proportion for consensus in global QC alignment
+  record_variants_below: 0.4
 
 
 # ==================== Clustering ====================

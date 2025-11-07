@@ -101,7 +101,7 @@ rule global_consensus:
         variants = QC_DIR / "global_consensus_variants.tsv"
     params:
         sample = "global_consensus",
-        min_prop = GLOBAL_CONSENSUS_MIN_PROP
+        record_variants_below = GLOBAL_CONSENSUS_RECORD_VARIANTS_BELOW
     log:
         LOG_DIR / "summary" / "global_consensus.log"
     conda:
@@ -115,7 +115,7 @@ rule global_consensus:
           {output.fasta} \
           {output.variants} \
           {params.sample} \
-          {params.min_prop} \
+          {params.record_variants_below} \
           2> {log}
         """
 
