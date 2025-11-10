@@ -86,6 +86,7 @@ rule detect_clusters:
         # Output directory will contain either:
         # - cluster_assignments.tsv (if clusters found)
         # - no_clusters.txt (if single cluster)
+        # Visualization is generated in same directory with fixed name if enabled.
         outdir=directory(CLUSTER_DETECTION_DIR / "{sample}"),
         viz_figure=CLUSTER_DETECTION_DIR / "{sample}" / "profiles_dendrogram.png" if PROFILE_GEN_ENABLE_VIZ else []
     params:
@@ -93,22 +94,22 @@ rule detect_clusters:
         min_cluster_size_percent=CLUSTERING_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters=CLUSTERING_MAX_CLUSTERS,
         min_variable_positions=CLUSTERING_MIN_VARIABLE_POSITIONS,
-        viz_flag=lambda wildcards, output: _viz_flag(PROFILE_GEN_ENABLE_VIZ, output.viz_figure[0]) if PROFILE_GEN_ENABLE_VIZ else "",
+        viz_out_flag=CLUSTER_DETECTION_VIZ_FLAG,
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
     conda:
         "../envs/qc.yaml"
     shell:
         """
-        python workflow/scripts/cluster_from_profiles.py \
-          {input.profile_tsv} \
-          {output.outdir} \
-          {params.viz_flag} \
-          --min_cluster_size {params.min_cluster_size} \
-          --min_cluster_size_percent {params.min_cluster_size_percent} \
-          --max_clusters {params.max_clusters} \
-          --min_variable_positions {params.min_variable_positions} \
-          2> {log}
+                python workflow/scripts/cluster_from_profiles.py \
+                    {input.profile_tsv} \
+                    {output.outdir} \
+                    {params.viz_out_flag} \
+                    --min_cluster_size {params.min_cluster_size} \
+                    --min_cluster_size_percent {params.min_cluster_size_percent} \
+                    --max_clusters {params.max_clusters} \
+                    --min_variable_positions {params.min_variable_positions} \
+                    2> {log}
         """
 
 # ==================== Split Reads by Cluster ====================

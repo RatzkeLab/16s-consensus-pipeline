@@ -388,7 +388,8 @@ def main():
     parser = argparse.ArgumentParser(description="Detect subclusters from read profiles")
     parser.add_argument("profile_file", help="Path to read_profiles.tsv file")
     parser.add_argument("outdir", help="Output directory")
-    parser.add_argument("--viz_out", help="Optional: output PNG path for profiles+dendrogram plot")
+    parser.add_argument("--viz_out", default=None,
+                        help="If set, write the visualization to this filename inside the output directory (e.g. profiles_dendrogram.png)")
     parser.add_argument("--min_cluster_size", type=int, default=5,
                         help="Minimum absolute cluster size")
     parser.add_argument("--min_cluster_size_percent", type=float, default=0.0,
@@ -403,6 +404,7 @@ def main():
     profile_file = Path(args.profile_file)
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+    viz_out_path = (outdir / args.viz_out) if args.viz_out else None
     
     # Check if profile file exists
     if not profile_file.exists():
@@ -423,13 +425,13 @@ def main():
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - insufficient variation\n")
         # Even if no clustering, optionally plot a trivial figure explaining lack of variation
-        if args.viz_out:
+        if viz_out_path:
             try:
                 fig, ax = plt.subplots(figsize=(6, 2))
                 ax.text(0.5, 0.5, "No variable positions to visualize", ha='center', va='center')
                 ax.axis('off')
-                Path(args.viz_out).parent.mkdir(parents=True, exist_ok=True)
-                fig.savefig(args.viz_out, dpi=200, bbox_inches='tight')
+                viz_out_path.parent.mkdir(parents=True, exist_ok=True)
+                fig.savefig(viz_out_path, dpi=200, bbox_inches='tight')
                 plt.close(fig)
             except Exception as e:
                 sys.stderr.write(f"Warning: failed to write trivial viz: {e}\n")
@@ -442,13 +444,13 @@ def main():
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - single cluster\n")
         # Optional trivial viz if requested
-        if args.viz_out:
+        if viz_out_path:
             try:
                 fig, ax = plt.subplots(figsize=(6, 2))
                 ax.text(0.5, 0.5, "Not enough reads to cluster", ha='center', va='center')
                 ax.axis('off')
-                Path(args.viz_out).parent.mkdir(parents=True, exist_ok=True)
-                fig.savefig(args.viz_out, dpi=200, bbox_inches='tight')
+                viz_out_path.parent.mkdir(parents=True, exist_ok=True)
+                fig.savefig(viz_out_path, dpi=200, bbox_inches='tight')
                 plt.close(fig)
             except Exception as e:
                 sys.stderr.write(f"Warning: failed to write trivial viz: {e}\n")
@@ -486,9 +488,9 @@ def main():
         sys.stderr.write(f"Warning: failed to persist clustering artifacts: {e}\n")
 
     # Produce integrated visualization if requested
-    if args.viz_out:
+    if viz_out_path:
         try:
-            plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, ch, args.viz_out)
+            plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, ch, viz_out_path)
         except Exception as e:
             sys.stderr.write(f"Warning: failed to generate integrated viz: {e}\n")
     if len(valid_clusters) < 2:

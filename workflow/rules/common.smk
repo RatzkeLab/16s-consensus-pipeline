@@ -196,3 +196,15 @@ def _viz_flag(enabled, output_path):
 PROFILE_GEN_AUTO_TRIM_FLAG = _bool_flag(PROFILE_GEN_AUTO_TRIM, "--auto_trim")
 PROFILE_GEN_COMPRESS_GAPS_FLAG = _bool_flag(PROFILE_GEN_COMPRESS_GAPS, "--compress_gaps")
 
+# Cluster detection viz flag - built once since it's the same for all samples
+def _get_cluster_viz_flag(filename: str):
+    """Return a --viz_out flag using only a filename (no directory logic) if viz enabled.
+
+    Caller is responsible for ensuring the working directory / output directory.
+    This keeps rule params free of inline logic.
+    """
+    return f"--viz_out {filename}" if PROFILE_GEN_ENABLE_VIZ else ""
+
+# Pre-built cluster detection visualization flag (fixed filename expected by downstream logic)
+CLUSTER_DETECTION_VIZ_FLAG = _get_cluster_viz_flag("profiles_dendrogram.png")
+
