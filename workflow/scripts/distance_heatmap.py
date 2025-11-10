@@ -96,7 +96,7 @@ def plot_heatmap(dm: pd.DataFrame, out_path: Union[str, Path], linkage_matrix=No
                           yticklabels=True)
         
         # Adjust tick label sizes
-        g.ax_heatmap.tick_params(axis='both', labelsize=max(6, min(10, 80 / n)))
+        g.ax_heatmap.tick_params(axis='both', labelsize=max(6, min(10, 80 / n if n > 0 else 10)))
         plt.setp(g.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
         plt.setp(g.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
         
@@ -116,7 +116,7 @@ def plot_heatmap(dm: pd.DataFrame, out_path: Union[str, Path], linkage_matrix=No
                 g.ax_heatmap.text(j + 0.5, i + 0.5, text, 
                                  ha="center", va="center",
                                  color="white", 
-                                 fontsize=max(5, min(9, 70 / n)),
+                                 fontsize=max(5, min(9, 70 / n if n > 0 else 9)),
                                  weight='bold')
         
         plt.savefig(out_path, dpi=200, bbox_inches='tight')
@@ -130,8 +130,8 @@ def plot_heatmap(dm: pd.DataFrame, out_path: Union[str, Path], linkage_matrix=No
         
         ax.set_xticks(np.arange(n))
         ax.set_yticks(np.arange(n))
-        ax.set_xticklabels(dm.columns, rotation=90, fontsize=max(6, min(10, 80 / n)))
-        ax.set_yticklabels(dm.index, fontsize=max(6, min(10, 80 / n)))
+        ax.set_xticklabels(dm.columns, rotation=90, fontsize=max(6, min(10, 80 / n if n > 0 else 10)))
+        ax.set_yticklabels(dm.index, fontsize=max(6, min(10, 80 / n if n > 0 else 10)))
         
         # Overlay text - bold and white
         for i in range(n):
@@ -139,7 +139,7 @@ def plot_heatmap(dm: pd.DataFrame, out_path: Union[str, Path], linkage_matrix=No
                 val = dm.values[i, j]
                 text = f"{int(val)}" if val == int(val) else f"{val:.1f}"
                 ax.text(j, i, text, ha="center", va="center",
-                       color="white", fontsize=max(5, min(9, 70 / n)),
+                       color="white", fontsize=max(5, min(9, 70 / n if n > 0 else 9)),
                        weight='bold')
         
         plt.savefig(out_path, dpi=200, bbox_inches='tight')
