@@ -148,7 +148,7 @@ rule filter_reads:
     input:
         fastq=get_input_fastq
     output:
-        fastq=FILTER_DIR / "{sample}.fastq"
+        fastq=temp(FILTER_DIR / "{sample}.fastq")
     params:
         nanofilt_params=NANOFILT_PARAMS,
         headcrop=FILTER_HEADCROP,
