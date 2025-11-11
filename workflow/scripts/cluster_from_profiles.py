@@ -58,12 +58,12 @@ def hamming_distance(profile1, profile2):
         when present on either side.
     - All other characters are compared directly; mismatch counts as 1.
     - Gaps ('-') are penalized only for the first position of a gap run when
-        used together with compress_gap_runs() which marks continuation gaps as 'N'.
+        used together with mark_gap_extensions() which marks continuation gaps as '.'.
     """
     dist = 0
     for c1, c2 in zip(profile1, profile2):
         # Ignore positions where either side is neutral
-        if c1 == 'N' or c2 == 'N':
+        if c1 == '.' or c2 == '.':
             continue
         if c1 != c2:
             dist += 1
