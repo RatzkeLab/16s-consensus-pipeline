@@ -74,8 +74,8 @@ def validate_alignment(seqs):
     return aln_len
 
 
-def compress_gap_runs(seqs):
-    """Compress gap runs by marking continuation gaps with '.'.
+def mark_gap_extensions(seqs, gap_char='-', extension_char='.'):
+    """Prepare sequences with gap runs by marking continuation gaps with '.'.
     
     Replaces all gaps after the first in each consecutive gap run with '.'.
     This reduces the weight of long gaps in distance calculations while still
@@ -85,6 +85,8 @@ def compress_gap_runs(seqs):
     
     Args:
         seqs: Dictionary of {header: sequence}
+        gap_char: Character representing gaps (default: '-')
+        extension_char: Character to mark continuation gaps (default: '.')
     
     Returns:
         Dictionary of {header: modified_sequence}
@@ -96,13 +98,13 @@ def compress_gap_runs(seqs):
         in_gap_run = False
         
         for char in seq:
-            if char == '-':
+            if char == gap_char:
                 if in_gap_run:
-                    # This is a continuation gap, mark with .
-                    new_seq.append('.')
+                    # This is a continuation gap, mark with extension_char
+                    new_seq.append(extension_char)
                 else:
                     # This is the first gap in a run, keep it
-                    new_seq.append('-')
+                    new_seq.append(char)
                     in_gap_run = True
             else:
                 # Non-gap character, reset gap run flag
@@ -114,7 +116,7 @@ def compress_gap_runs(seqs):
     return compressed
 
 
-def identify_variable_positions(seqs, min_minor_freq, trim_bp=70, auto_trim=False, compress_gaps=False, 
+def identify_variable_positions(seqs, min_minor_freq, trim_bp=70, auto_trim=True, compress_gaps=True, 
                                min_trim=50, max_trim=250):
     """Identify positions where the second-most-common allele is above threshold.
     
@@ -162,34 +164,18 @@ def identify_variable_positions(seqs, min_minor_freq, trim_bp=70, auto_trim=Fals
     end_pos = aln_len - trim_end
     
     sys.stderr.write(f"Analyzing positions {start_pos} to {end_pos}\n")
-    
+
+    # Iterate over each position in the alignment, and save variable positions
     for pos in range(start_pos, end_pos):
         column = seq_array[:, pos]
         
-        # If compress_gaps is enabled, check if '.' is in top 2 most common
-        # Filter it out if so
-        if compress_gaps:
-            unique, counts = np.unique(column, return_counts=True)
-            if '.' in unique:
-                # Get top 2 by count
-                sorted_indices = np.argsort(counts)[::-1]
-                top_2_chars = unique[sorted_indices[:2]]
-                
-                if '.' in top_2_chars:
-                    # Filter out '.' from the column
-                    column = column[column != '.']
-        
-        if len(column) == 0:
-            # Skip positions that are only gap continuation markers
-            continue
-        
         # Get unique characters and their counts
         unique, counts = np.unique(column, return_counts=True)
-        
-        if len(unique) < 2:
+
+        if len(unique) < 2: 
             # Only one character type at this position
             continue
-        
+
         # Sort by count (descending)
         sorted_indices = np.argsort(counts)[::-1]
         sorted_counts = counts[sorted_indices]
@@ -197,6 +183,16 @@ def identify_variable_positions(seqs, min_minor_freq, trim_bp=70, auto_trim=Fals
         # Check second-most-common frequency
         second_count = sorted_counts[1]
         second_freq = second_count / len(column)
+
+        # If compress_gaps is enabled, check if '.' is in top 2 most common
+        # Filter it out if so
+        if compress_gaps:
+            if '.' in unique:
+                # Get top 2 by count
+                top_2_chars = unique[sorted_indices[:2]]
+                if '.' in top_2_chars:
+                    # skip this position, as gap continuation is prevalent
+                    continue
         
         if second_freq >= min_minor_freq:
             variable_positions.append(pos)
@@ -267,7 +263,7 @@ def main():
     # Compress gap runs if requested
     if args.compress_gaps:
         sys.stderr.write("\nCompressing gap runs (marking continuation gaps with '.')\n")
-        seqs = compress_gap_runs(seqs)
+        seqs = mark_gap_extensions(seqs)
     
     # Identify variable positions
     sys.stderr.write("\nIdentifying variable positions...\n")
