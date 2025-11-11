@@ -5,7 +5,7 @@
 
 # Input directory containing FASTQ files (*.fastq or *.fastq.gz)
 # if demultiplexing using minibar, make sure you have reversed backwards reads first
-input_dir: "demo/unflipped"
+input_dir: "demo/unflipped1"
 
 # Output directory for all results
 outdir: "demo/demo_output"
@@ -137,6 +137,9 @@ cluster_consensus:
 ## ==================== Output Report ====================
 # Pairwise edit distance report
 pairwise_distance:
+  # Include naive consensus sequences in addition to cluster subconsensuses
+  include_naive_consensus: true
+  
   # Automatically calculate trim values based on longest leading/trailing gaps
   # If true, ignore_first_n_bp and ignore_last_n_bp are ignored
   auto_trim: true
