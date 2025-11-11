@@ -257,8 +257,12 @@ def profiles_to_numeric_matrix(headers, variable_positions, profiles):
     return mat, cmap, norm, symbols + ['?']
 
 
-def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, cut_height, out_png):
-    """Plot profile categorical clustermap with dendrogram and cut line."""
+def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, out_png, cluster_assignments=None):
+    """Plot profile categorical clustermap with dendrogram and a side color bar for cluster assignments.
+
+    cluster_assignments: Optional dict mapping read_id -> cluster label (e.g., 'A', 'B', ...).
+    Unassigned reads are shown in gray.
+    """
     from matplotlib.patches import Patch
     # Edge cases: no headers or no variable positions => trivial figure
     if len(headers) == 0 or len(variable_positions) == 0:
@@ -321,7 +325,7 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
         ax.imshow(mat, aspect='auto', cmap=cmap, norm=norm, interpolation='nearest')
         ax.set_xlabel('Variable positions')
         ax.set_ylabel('Reads')
-        ax.set_title(f"Profiles heatmap (cut @ {cut_height:.2f})")
+        ax.set_title("Profiles heatmap")
         # Write fallback figure
         out_path = Path(out_png)
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -329,6 +333,35 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
         plt.close(fig)
         sys.stderr.write(f"Wrote fallback heatmap to {out_path}\n")
         return
+
+    # Build row color bar from cluster assignments (if provided)
+    row_colors = None
+    try:
+        if cluster_assignments is not None and len(cluster_assignments) > 0:
+            labels_present = sorted(set(cluster_assignments.values()))
+            # Use a stable palette with enough distinct colors
+            palette_name = "tab20" if len(labels_present) <= 20 else "hsv"
+            pal = sns.color_palette(palette_name, n_colors=len(labels_present))
+            label_to_color = {lab: pal[i] for i, lab in enumerate(labels_present)}
+            default_color = (0.7, 0.7, 0.7)
+            row_colors = [label_to_color.get(cluster_assignments.get(h), default_color) for h in headers]
+            # Recreate clustermap with row_colors so the strip shows next to rows
+            g = sns.clustermap(
+                df,
+                row_linkage=linkage_matrix if linkage_matrix is not None else None,
+                col_cluster=False,
+                cmap=cmap,
+                norm=norm,
+                xticklabels=True,
+                yticklabels=False,
+                figsize=figsize,
+                dendrogram_ratio=0.15,
+                cbar_pos=None,
+                row_colors=row_colors,
+                colors_ratio=0.015,
+            )
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to add cluster side colors: {e}\n")
 
     # Adjust x-axis labels
     try:
@@ -355,17 +388,25 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
     except Exception as e:
         sys.stderr.write(f"Warning: could not overlay text labels: {e}\n")
 
-    title = f"Profiles heatmap with dendrogram (cut @ {cut_height:.2f})"
+    title = "Profiles heatmap with dendrogram"
     try:
         g.ax_heatmap.set_title(title, pad=12)
     except Exception:
         pass
+
+    # Legend for cluster assignments (if provided)
     try:
-        if linkage_matrix is not None and cut_height > 0 and hasattr(g, 'ax_row_dendrogram'):
-            ax_d = g.ax_row_dendrogram
-            ax_d.axhline(y=cut_height, color='red', linestyle='--', linewidth=1.5, alpha=0.8)
+        if row_colors is not None and cluster_assignments is not None and len(cluster_assignments) > 0:
+            from matplotlib.patches import Patch
+            labels_present = sorted(set(cluster_assignments.values()))
+            # Rebuild mapping to ensure consistent order with colors
+            palette_name = "tab20" if len(labels_present) <= 20 else "hsv"
+            pal = sns.color_palette(palette_name, n_colors=len(labels_present))
+            label_to_color = {lab: pal[i] for i, lab in enumerate(labels_present)}
+            handles = [Patch(facecolor=label_to_color[lab], edgecolor='none', label=str(lab)) for lab in labels_present]
+            g.fig.legend(handles, [str(l) for l in labels_present], loc='upper left', title='Cluster', frameon=False)
     except Exception as e:
-        sys.stderr.write(f"Warning: could not draw cut line on dendrogram: {e}\n")
+        sys.stderr.write(f"Warning: could not add cluster legend: {e}\n")
 
     # Legend for symbols
     try:
@@ -473,24 +514,20 @@ def main():
     valid_clusters = [c for c in clusters if len(c) >= effective_min_size]
     sys.stderr.write(f"{len(valid_clusters)} clusters meet minimum size threshold\n")
     
-    # Persist lightweight artifacts and plot (no large linkage files on disk)
+    # Build cluster assignments for visualization (valid clusters only)
     headers = list(profiles.keys())
-    ch, k = compute_cut_height(linkage_matrix, max_clusters=args.max_clusters)
-    try:
-        with open(outdir / "headers.txt", "w") as hf:
-            for h in headers:
-                hf.write(f"{h}\n")
-        with open(outdir / "cut_height.txt", "w") as cf:
-            cf.write(f"{ch}\n")
-        with open(outdir / "n_clusters_estimate.txt", "w") as nf:
-            nf.write(f"{k}\n")
-    except Exception as e:
-        sys.stderr.write(f"Warning: failed to persist clustering artifacts: {e}\n")
+    cluster_assignments = {}
+    if len(valid_clusters) > 0:
+        cluster_labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        for i, cluster in enumerate(sorted(valid_clusters, key=len, reverse=True)):
+            label = cluster_labels[i] if i < len(cluster_labels) else str(i)
+            for read_id in sorted(cluster):
+                cluster_assignments[read_id] = label
 
-    # Produce integrated visualization if requested
+    # Produce integrated visualization (with side color bar) if requested
     if viz_out_path:
         try:
-            plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, ch, viz_out_path)
+            plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, viz_out_path, cluster_assignments=cluster_assignments)
         except Exception as e:
             sys.stderr.write(f"Warning: failed to generate integrated viz: {e}\n")
     if len(valid_clusters) < 2:
@@ -498,15 +535,10 @@ def main():
         with open(outdir / "no_clusters.txt", "w") as f:
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - single cluster\n")
-        
-        # Still plot integrated profiles viz for QC (even if no clusters)
         return
     
     # Multiple clusters found - write cluster assignments
     sys.stderr.write(f"Multiple clusters detected ({len(valid_clusters)} clusters)\n")
-    
-    cluster_labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    cluster_assignments = {}
     
     with open(outdir / "cluster_assignments.tsv", "w") as f:
         f.write("read_id\tcluster\n")
@@ -514,7 +546,6 @@ def main():
             label = cluster_labels[i] if i < len(cluster_labels) else str(i)
             for read_id in sorted(cluster):
                 f.write(f"{read_id}\t{label}\n")
-                cluster_assignments[read_id] = label
     
     sys.stderr.write(f"Wrote cluster assignments to cluster_assignments.tsv\n")
     
