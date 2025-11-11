@@ -15,20 +15,23 @@ rule pairwise_edit_distance:
     """
     Calculate pairwise edit distances between all consensus sequences.
     
-    Upstream: cluster_consensus.smk (rule pool_multi)
+    Upstream: cluster_consensus.smk (rule pool_multi), naive_consensus.smk (rule pool_naive)
     Downstream: None (analysis output)
     
     Computes edit distance (Levenshtein distance) between every pair of
-    consensus sequences in the multi-consensus database to show similarity.
+    consensus sequences. Can include both cluster subconsensuses and naive
+    consensuses if configured.
     """
     input:
-        multi_db = MULTI_DATABASE_FILE
+        multi_db = MULTI_DATABASE_FILE,
+        naive_db = NAIVE_DATABASE_FILE if PAIRWISE_DISTANCE_INCLUDE_NAIVE else []
     output:
         distances = PAIRWISE_DISTANCE_FILE
     params:
         ignore_first_n_bp = PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP,
         ignore_last_n_bp = PAIRWISE_DISTANCE_IGNORE_LAST_N_BP,
-        auto_trim = PAIRWISE_DISTANCE_AUTO_TRIM
+        auto_trim = PAIRWISE_DISTANCE_AUTO_TRIM,
+        include_naive = PAIRWISE_DISTANCE_INCLUDE_NAIVE
     conda:
         "../envs/qc.yaml"
     log:

@@ -89,14 +89,23 @@ def trim_sequences(sequences, ignore_first_n_bp, ignore_last_n_bp):
 
 def main():
     # Get input/output from snakemake
-    input_fasta = snakemake.input.multi_db
+    multi_db = snakemake.input.multi_db
+    naive_db = snakemake.input.naive_db if hasattr(snakemake.input, 'naive_db') else None
     output_tsv = snakemake.output.distances
     ignore_first_n_bp = snakemake.params.ignore_first_n_bp
     ignore_last_n_bp = snakemake.params.ignore_last_n_bp
     auto_trim = snakemake.params.auto_trim
+    include_naive = snakemake.params.include_naive
     
-    # Parse sequences
-    sequences = parse_fasta(input_fasta)
+    # Parse sequences from multi database
+    sequences = parse_fasta(multi_db)
+    print(f"Loaded {len(sequences)} sequences from multi database", file=sys.stderr)
+    
+    # Optionally add naive consensus sequences
+    if include_naive and naive_db:
+        naive_sequences = parse_fasta(naive_db)
+        print(f"Loaded {len(naive_sequences)} sequences from naive database", file=sys.stderr)
+        sequences.update(naive_sequences)
     
     # Determine trim values
     if auto_trim:

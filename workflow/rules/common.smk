@@ -87,6 +87,7 @@ SECONDARY_ALIGNMENT_GAP_EXTEND = config.get("secondary_alignment", {}).get("gap_
 CLUSTER_CONSENSUS_RECORD_VARIANTS_BELOW = config.get("cluster_consensus", {}).get("record_variants_below", 0.6)
 
 # Pairwise distance parameters
+PAIRWISE_DISTANCE_INCLUDE_NAIVE = config.get("pairwise_distance", {}).get("include_naive_consensus", True)
 PAIRWISE_DISTANCE_AUTO_TRIM = config.get("pairwise_distance", {}).get("auto_trim", True)
 PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP = config.get("pairwise_distance", {}).get("ignore_first_n_bp", 70)
 PAIRWISE_DISTANCE_IGNORE_LAST_N_BP = config.get("pairwise_distance", {}).get("ignore_last_n_bp", 70)
