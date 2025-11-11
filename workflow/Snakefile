@@ -5,7 +5,7 @@ This pipeline was built specifically to process Oxford Nanopore long-read 16S rR
 to generate consensus sequences for each sample.
 """
 
-configfile: "default_config.yaml"
+configfile: "workflow/default_config.yaml"
 
 include: "rules/common.smk"
 include: "rules/1_preprocessing.smk"
