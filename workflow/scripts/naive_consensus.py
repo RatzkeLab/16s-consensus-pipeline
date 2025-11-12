@@ -26,24 +26,37 @@ import numpy as np
 
 BASE_ORDER = ['A', 'T', 'G', 'C', '-']
 
-def read_fasta(path):
-    """Load FASTA sequences from file."""
-    seqs = []
+def read_fasta_to_array(path):
+    """Load FASTA sequences directly into numpy array.
+    
+    More efficient than building strings then converting - reads directly
+    into list of character lists, then converts to numpy array in one shot.
+    
+    Returns:
+        numpy array of shape (n_sequences, alignment_length) with dtype='U1'
+    """
+    seq_lists = []
     with open(path) as f:
-        seq_buf = []
+        current_seq = []
         for line in f:
             line = line.strip()
             if not line:
                 continue
             if line.startswith(">"):
-                if seq_buf:
-                    seqs.append("".join(seq_buf).upper())
-                seq_buf = []
+                if current_seq:
+                    seq_lists.append(current_seq)
+                current_seq = []
             else:
-                seq_buf.append(line)
-        if seq_buf:
-            seqs.append("".join(seq_buf).upper())
-    return seqs
+                # Add characters directly to list (no string building)
+                current_seq.extend(list(line.upper()))
+        if current_seq:
+            seq_lists.append(current_seq)
+    
+    if not seq_lists:
+        return np.array([])
+    
+    # Convert to numpy array in one operation
+    return np.array(seq_lists, dtype='U1')
 
 def build_frequency_matrix(seq_array):
     """Build base frequency matrix from sequence array."""
@@ -95,18 +108,15 @@ def write_ambiguous_report(ambiguous_positions, output_path):
             gap_prop = variants.get("-", 0.0)
             f.write(f"{pos}\t{a_prop:.4f}\t{t_prop:.4f}\t{g_prop:.4f}\t{c_prop:.4f}\t{gap_prop:.4f}\n")
 
-def validate_sequences(seqs, aln_path):
-    """Validate that sequences are present and equal length."""
-    if not seqs:
+def validate_array(seq_array, aln_path):
+    """Validate that sequence array is present and rectangular."""
+    if seq_array.size == 0:
         sys.stderr.write(f"ERROR: No sequences in {aln_path}\n")
         sys.exit(1)
     
-    aln_len = len(seqs[0])
-    if any(len(s) != aln_len for s in seqs):
+    if seq_array.ndim != 2:
         sys.stderr.write("ERROR: Alignment sequences not equal length\n")
         sys.exit(1)
-    
-    return aln_len
 
 def main(aln_path, fa_out, tsv_out, sample, min_prop):
     """Generate consensus sequence from alignment.
@@ -118,11 +128,9 @@ def main(aln_path, fa_out, tsv_out, sample, min_prop):
         sample: Sample name for consensus sequence header
         min_prop: Minimum winner proportion (0-1) to call position unambiguous
     """
-    seqs = read_fasta(aln_path)
-    validate_sequences(seqs, aln_path)
-    
-    # Convert to numpy array
-    seq_array = np.array([list(seq) for seq in seqs])
+    # Load sequences directly into numpy array
+    seq_array = read_fasta_to_array(aln_path)
+    validate_array(seq_array, aln_path)
     
     # Build frequency matrix once
     freq_matrix = build_frequency_matrix(seq_array)
