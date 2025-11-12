@@ -7,6 +7,7 @@ avoid lambdas in rule inputs, rather put functions in common.smk
 if flags are needed for the bash script, build flag strings in common.smk, where possible
 rules are found in workflow/rules
 scripts (including python) are found in workflow/scripts
+because python scripts are called from snakemake, there will be a vs code warning about unresolved import - which can be ignored, as long as the script is run within the conda environment created for the pipeline
 workflow/Snakefile is the main snakemake file
 before running anything with snakemake run this command separately conda activate snakemake_env or use conda run -n snakemake_env snakemake ...
 all pipeline variables (including paths or folder names etc) should be declared in common.smk so there is a single source of truth
