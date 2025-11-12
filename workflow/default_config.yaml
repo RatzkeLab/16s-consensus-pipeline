@@ -55,7 +55,7 @@ subsample:
 initial_alignment:
   # MAFFT algorithm for initial per-sample alignment
   # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
-  mafft_algorithm: "ginsi"
+  mafft_algorithm: "default"
   # Gap opening penalty (default: 1.53 for --auto, algorithm-specific otherwise)
   # Set to 0 to use MAFFT defaults
   gap_open: 0
@@ -127,7 +127,7 @@ clustering_algorithm:
 secondary_alignment:
   # MAFFT algorithm for cluster realignment
   # Options: "auto" (mafft decides automatically) or "ginsi" (accurate, slow)
-  mafft_algorithm: "ginsi"
+  mafft_algorithm: "default"
   # Gap opening penalty (0 = use MAFFT defaults)
   gap_open: 0
   # Gap extension penalty (0 = use MAFFT defaults)
