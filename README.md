@@ -58,8 +58,11 @@ filter:
 
 subsample_n: 150                      # Reads per sample for alignment
 
-consensus:
-  min_consensus_proportion: 0.6       # 60% threshold for adding a locus to the error profile
+naive_consensus:
+  record_variants_below: 0.6          # Flag positions as ambiguous where winner has ≤60% support
+
+per_read_profile_generation:
+  min_minor_freq: 0.05                # Include positions where 2nd-place base has ≥5% frequency
 ```
 
 ## Pipeline Steps
@@ -70,9 +73,12 @@ consensus:
 4. **Filtered QC Checkpoint** - Filter samples with ≥ min_reads_filtered
 5. **Subsample** - Randomly select up to subsample_n reads
 6. **Align** - Create multiple sequence alignment with MAFFT
-7. **Consensus** - Generate naive consensus (winner-takes-all, 60% threshold)
-8. **Pool** - Concatenate all consensus sequences into single database FASTA
-9. **Summary** - Generate pipeline report
+7. **Naive Consensus** - Generate consensus using winner-takes-all (most common base at each position)
+8. **Read Profiling** - Identify variable positions and create per-read profiles for clustering
+9. **Cluster Detection** - Detect multiple 16S copies by clustering read profiles
+10. **Cluster Consensus** - Generate separate consensus sequences for each detected cluster
+11. **Pool** - Concatenate all consensus sequences into database FASTA files
+12. **QC & Summary** - Generate quality control metrics and pipeline report
 
 ## Outputs
 

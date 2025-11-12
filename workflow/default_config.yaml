@@ -75,7 +75,10 @@ naive_consensus:
 # ==================== QC Consensus Generation ====================
 
 global_consensus:
-  # Minimum proportion for consensus in global QC alignment
+  # Positions where the winning base has proportion <= this threshold are
+  # recorded as "ambiguous" in the global consensus variants TSV report.
+  # Same logic as naive_consensus.record_variants_below, but for the final
+  # global alignment of all consensus sequences.
   record_variants_below: 0.4
 
 
@@ -83,7 +86,9 @@ global_consensus:
 
 # Settings for initial per-sample read profile generation used by cluster detection
 per_read_profile_generation:
-  # Minimum frequency for second-most-common allele (positions above this are variable)
+  # Minimum frequency for second-most-common allele to mark a position as "variable"
+  # for read profiling. Positions where the runner-up base has frequency >= this
+  # threshold are used for clustering.
   min_minor_freq: 0.05
   # Manual trim if auto_trim is false
   trim_bp: 70
