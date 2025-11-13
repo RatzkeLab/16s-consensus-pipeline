@@ -39,10 +39,14 @@ def main(initial_check, filtered_check, output_path):
         filtered_total = len(filtered)
         filtered_pass = sum(1 for s in filtered.values() if s['status'] == 'PASS')
         
+        # Get thresholds from first available sample in each dict
+        initial_threshold = next(iter(initial.values()))['threshold'] if initial else 'N/A'
+        filtered_threshold = next(iter(filtered.values()))['threshold'] if filtered else 'N/A'
+        
         f.write("## Pipeline Summary\n\n")
         f.write(f"Total samples processed: {initial_total}\n")
-        f.write(f"Passed initial QC (≥{initial[all_samples[0]]['threshold']} reads): {initial_pass}/{initial_total}\n")
-        f.write(f"Passed filtered QC (≥{filtered.get(all_samples[0], {}).get('threshold', 'N/A')} reads): {filtered_pass}/{filtered_total}\n")
+        f.write(f"Passed initial QC (≥{initial_threshold} reads): {initial_pass}/{initial_total}\n")
+        f.write(f"Passed filtered QC (≥{filtered_threshold} reads): {filtered_pass}/{filtered_total}\n")
         f.write(f"Final consensus sequences: {filtered_pass}\n\n")
         
         # Sample attrition table
@@ -72,11 +76,11 @@ def main(initial_check, filtered_check, output_path):
         
         if failed_initial:
             f.write(f"### Failed Initial QC ({len(failed_initial)} samples)\n")
-            f.write(f"Samples with <{initial[all_samples[0]]['threshold']} reads: {', '.join(failed_initial)}\n\n")
+            f.write(f"Samples with <{initial_threshold} reads: {', '.join(failed_initial)}\n\n")
         
         if failed_filtered:
             f.write(f"### Failed Post-Filter QC ({len(failed_filtered)} samples)\n")
-            f.write(f"Samples with <{filtered[all_samples[0]]['threshold']} reads after filtering: {', '.join(failed_filtered)}\n\n")
+            f.write(f"Samples with <{filtered_threshold} reads after filtering: {', '.join(failed_filtered)}\n\n")
 
 
 if __name__ == "__main__":

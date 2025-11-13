@@ -20,24 +20,29 @@ from common_helpers import calculate_auto_trim
 
 
 def read_fasta(path):
-    """Read FASTA alignment and return dict of {header: sequence}."""
+    """Read FASTA alignment and return dict of {header: sequence}.
+    
+    Optimized to build sequences character-by-character with list.extend()
+    and single join at the end per sequence.
+    """
     seqs = {}
     with open(path) as f:
         header = None
-        seq_buf = []
+        seq_chars = []
         for line in f:
             line = line.strip()
             if not line:
                 continue
             if line.startswith(">"):
                 if header is not None:
-                    seqs[header] = "".join(seq_buf).upper()
+                    seqs[header] = ''.join(seq_chars)
                 header = line[1:]
-                seq_buf = []
+                seq_chars = []
             else:
-                seq_buf.append(line)
+                # Extend with uppercase characters (no intermediate strings)
+                seq_chars.extend(line.upper())
         if header is not None:
-            seqs[header] = "".join(seq_buf).upper()
+            seqs[header] = ''.join(seq_chars)
     return seqs
 
 
@@ -94,24 +99,23 @@ def mark_gap_extensions(seqs, gap_char='-', extension_char='.'):
     compressed = {}
     
     for header, seq in seqs.items():
-        new_seq = []
-        in_gap_run = False
+        # Convert to numpy array for vectorized operations
+        seq_array = np.array(list(seq), dtype='U1')
         
-        for char in seq:
-            if char == gap_char:
-                if in_gap_run:
-                    # This is a continuation gap, mark with extension_char
-                    new_seq.append(extension_char)
-                else:
-                    # This is the first gap in a run, keep it
-                    new_seq.append(char)
-                    in_gap_run = True
-            else:
-                # Non-gap character, reset gap run flag
-                new_seq.append(char)
-                in_gap_run = False
+        # Find gap positions
+        is_gap = seq_array == gap_char
         
-        compressed[header] = ''.join(new_seq)
+        # Find where gaps start (gap with no gap before)
+        gap_starts = is_gap.copy()
+        gap_starts[1:] = is_gap[1:] & ~is_gap[:-1]
+        
+        # Mark continuation gaps (gaps that aren't starts)
+        continuation_gaps = is_gap & ~gap_starts
+        
+        # Replace continuation gaps with extension character
+        seq_array[continuation_gaps] = extension_char
+        
+        compressed[header] = ''.join(seq_array)
     
     return compressed
 
