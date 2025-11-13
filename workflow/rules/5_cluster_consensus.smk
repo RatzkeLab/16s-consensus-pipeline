@@ -14,22 +14,37 @@ Downstream: 6_summary.smk (rule generate_summary)
 
 # ==================== Realign Clusters ====================
 
+def get_cluster_fastq(wildcards):
+    """
+    Dynamic input function for realign_cluster.
+    Only collects FASTQ files from split_reads directory (ignores no_split samples).
+    """
+    # Trigger the checkpoint
+    checkpoints.split_reads.get(sample=wildcards.sample)
+    
+    # Return the FASTQ file path for this specific cluster
+    return str(SPLIT_READS_DIR / wildcards.sample / f"{wildcards.cluster}.fastq")
+
+
 rule realign_cluster:
     """
     Align reads for a specific cluster using MAFFT.
     
-    Upstream: checkpoint split_reads (dynamically for each cluster)
-    Downstream: multi_consensus.smk (rule cluster_consensus)
+    Upstream: checkpoint split_reads (only for samples with multiple clusters)
+    Downstream: rule cluster_consensus
     
     After reads are split by cluster, each cluster is aligned separately
     to produce more accurate cluster-specific alignments. This improves
     consensus quality by avoiding cross-contamination between variants.
     
-    Input: FASTQ file for a single cluster (or all reads if no clusters detected)
+    Note: This rule only runs for samples that were actually split into 
+    multiple clusters. Single-cluster samples use naive consensus instead.
+    
+    Input: FASTQ file for a single cluster
     Output: Aligned FASTA file for that cluster
     """
     input:
-        fastq = SPLIT_READS_DIR / "{sample}" / "{cluster}.fastq"
+        fastq = get_cluster_fastq
     output:
         fasta = CLUSTER_ALIGNMENT_DIR / "{sample}" / "{cluster}.fasta"
     log:
@@ -90,27 +105,48 @@ rule cluster_consensus:
 
 # ==================== Pool Cluster Consensus Database ====================
 
+def get_multi_consensus_inputs(wildcards):
+    """
+    Get all consensus files for multi database.
+    - For split samples: cluster consensus files
+    - For non-split samples: naive consensus files
+    """
+    # Get split samples (have multiple clusters)
+    split_samples = get_split_samples(wildcards)
+    split_consensus = []
+    for sample in split_samples:
+        # Trigger checkpoint
+        checkpoints.split_reads.get(sample=sample)
+        split_dir = SPLIT_READS_DIR / sample
+        fastq_files = list(split_dir.glob("*.fastq"))
+        for fastq in sorted(fastq_files):
+            cluster_name = fastq.stem
+            consensus_file = CLUSTER_CONSENSUS_DIR / sample / f"{cluster_name}.fasta"
+            split_consensus.append(str(consensus_file))
+    
+    # Get non-split samples (single cluster - use naive consensus)
+    no_split_samples = get_no_split_samples(wildcards)
+    naive_consensus = [str(NAIVE_CONSENSUS_DIR / f"{sample}.fasta") for sample in no_split_samples]
+    
+    return split_consensus + naive_consensus
+
+
 rule pool_multi:
     """
-    Concatenate all cluster consensus sequences into a single database FASTA.
+    Concatenate all consensus sequences into a single database FASTA.
     
-    Upstream: rule cluster_consensus (all clusters from all samples)
+    Upstream: rule cluster_consensus (for split samples), rule naive_consensus (for non-split samples)
     Downstream: summary.smk (rule generate_summary)
     
     For each sample:
-    - If clusters detected: includes all cluster consensuses (e.g., sampleA_A, sampleA_B)
-    - If no clusters: includes the naive consensus for that sample
+    - If multiple clusters detected: includes all cluster consensuses (e.g., sample_A, sample_B)
+    - If single/no clusters: includes the naive consensus for that sample (avoids redundant computation)
     
-    This uses the split_reads checkpoint to dynamically discover cluster files.
-    Aggregates all split consensus sequences into one output file for
-    downstream analysis (e.g., BLAST, taxonomy assignment).
+    This uses the split_reads checkpoint to dynamically determine which samples
+    were split vs. which should use naive consensus.
     """
     input:
-        # Use checkpoint to trigger split_reads for all samples
-        split_dirs = lambda w: [checkpoints.split_reads.get(sample=s).output.outdir 
-                                for s in get_aligned_samples(w)],
-        # Cluster consensus files for all clusters
-        cluster_consensus = lambda w: get_all_cluster_consensus_files(w)
+        consensus_files = get_multi_consensus_inputs
     output:
         database = MULTI_DATABASE_FILE
     log:
@@ -121,11 +157,11 @@ rule pool_multi:
         """
         mkdir -p "$(dirname {output.database})"
         
-        # Concatenate all cluster consensus files
-        cat {input.cluster_consensus} > {output.database}
+        # Concatenate all consensus files
+        cat {input.consensus_files} > {output.database}
         
         NUM_SEQS=$(grep -c "^>" {output.database} || echo "0")
-        echo "Pooled $NUM_SEQS cluster consensus sequences into database" > {log}
+        echo "Pooled $NUM_SEQS consensus sequences into database" > {log}
         """
 
 

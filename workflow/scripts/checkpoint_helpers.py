@@ -114,9 +114,68 @@ def get_all_cluster_fastqs(checkpoints, wildcards):
     return all_fastqs
 
 
+def get_split_samples(checkpoints, wildcards, split_reads_dir):
+    """
+    Get list of samples that were split into multiple clusters.
+    
+    Args:
+        checkpoints: Snakemake checkpoints object
+        wildcards: Snakemake wildcards object
+        split_reads_dir: Path to split reads directory
+    
+    Returns:
+        List of sample names that have multiple clusters (were split)
+    """
+    checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
+    passing = read_passing_samples(checkpoint_output)
+    split_samples = []
+    
+    for sample in passing:
+        # Trigger checkpoint
+        checkpoints.split_reads.get(sample=sample)
+        
+        # Check if sample directory has FASTQ files (vs. marker file)
+        sample_dir = split_reads_dir / sample
+        if sample_dir.exists():
+            fastq_files = list(sample_dir.glob("*.fastq"))
+            if fastq_files:  # Has FASTQ files = was split
+                split_samples.append(sample)
+    
+    return split_samples
+
+
+def get_no_split_samples(checkpoints, wildcards, split_reads_dir):
+    """
+    Get list of samples that were NOT split (single cluster or no clusters).
+    
+    Args:
+        checkpoints: Snakemake checkpoints object
+        wildcards: Snakemake wildcards object
+        split_reads_dir: Path to split reads directory (same as split samples)
+    
+    Returns:
+        List of sample names that were not split (have marker file)
+    """
+    checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
+    passing = read_passing_samples(checkpoint_output)
+    no_split_samples = []
+    
+    for sample in passing:
+        # Trigger checkpoint
+        checkpoints.split_reads.get(sample=sample)
+        
+        # Check if sample has no_split marker
+        sample_dir = split_reads_dir / sample
+        marker = sample_dir / "no_split.txt"
+        if marker.exists():
+            no_split_samples.append(sample)
+    
+    return no_split_samples
+
+
 def get_all_cluster_consensus_files(checkpoints, wildcards, cluster_consensus_dir):
     """
-    Get all cluster consensus files for all passing samples.
+    Get all cluster consensus files for all passing samples that were split.
     
     Args:
         checkpoints: Snakemake checkpoints object
@@ -124,7 +183,7 @@ def get_all_cluster_consensus_files(checkpoints, wildcards, cluster_consensus_di
         cluster_consensus_dir: Path to cluster consensus directory
     
     Returns:
-        List of paths to all cluster consensus FASTA files
+        List of paths to all cluster consensus FASTA files (only for split samples)
     """
     checkpoint_output = checkpoints.check_min_reads_filtered.get(**wildcards).output.passing
     passing = read_passing_samples(checkpoint_output)
@@ -134,6 +193,8 @@ def get_all_cluster_consensus_files(checkpoints, wildcards, cluster_consensus_di
         # Get split reads checkpoint output for this sample
         checkpoint_output = checkpoints.split_reads.get(sample=sample).output.outdir
         split_dir = Path(checkpoint_output)
+        
+        # Only process if this sample was actually split (has FASTQ files)
         fastq_files = list(split_dir.glob("*.fastq"))
         
         # Generate consensus file paths for each cluster

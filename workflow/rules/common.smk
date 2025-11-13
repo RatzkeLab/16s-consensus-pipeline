@@ -13,6 +13,8 @@ from checkpoint_helpers import (
     get_cluster_fastqs_for_sample as _get_cluster_fastqs_for_sample,
     get_all_cluster_fastqs as _get_all_cluster_fastqs,
     get_all_cluster_consensus_files as _get_all_cluster_consensus_files,
+    get_split_samples as _get_split_samples,
+    get_no_split_samples as _get_no_split_samples,
 )
 
 from common_helpers import (
@@ -147,8 +149,16 @@ def get_all_cluster_fastqs(wildcards):
     return _get_all_cluster_fastqs(checkpoints, wildcards)
 
 def get_all_cluster_consensus_files(wildcards):
-    """Get all cluster consensus files for all passing samples."""
+    """Get all cluster consensus files for all passing samples that were split."""
     return _get_all_cluster_consensus_files(checkpoints, wildcards, CLUSTER_CONSENSUS_DIR)
+
+def get_split_samples(wildcards):
+    """Get samples that were split into multiple clusters."""
+    return _get_split_samples(checkpoints, wildcards, SPLIT_READS_DIR)
+
+def get_no_split_samples(wildcards):
+    """Get samples that were NOT split (single/no cluster)."""
+    return _get_no_split_samples(checkpoints, wildcards, SPLIT_READS_DIR)
 
 # ==================== Initialize ====================
 # Dynamically generate command flags from config on initialization

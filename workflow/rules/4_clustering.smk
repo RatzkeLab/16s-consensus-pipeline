@@ -116,24 +116,25 @@ rule detect_clusters:
 
 checkpoint split_reads:
     """
-    Split subsampled reads into cluster-specific FASTQ files.
+    Split subsampled reads into cluster-specific FASTQ files (only if multiple clusters).
     
     Upstream: rule subsample (in 2_alignment.smk) AND rule detect_clusters
-    Downstream: rule realign_cluster (for each cluster detected)
+    Downstream: rule realign_cluster (for each cluster detected, only if multiple)
     
-    If clusters were detected, splits reads into separate files (sample_A.fastq, sample_B.fastq, etc.).
-    If no clusters, copies the input file as-is (sample.fastq).
+    If multiple clusters: splits reads into separate files (sample_A.fastq, sample_B.fastq, etc.)
+    If single/no clusters: creates a marker file (no_split.txt) instead
     
     This is a checkpoint because the number of output files varies dynamically
-    depending on whether clusters were detected and how many.
+    depending on whether multiple clusters were detected. When not split, downstream
+    rules will use the naive consensus instead of recomputing.
     """
     input:
         fastq=SUBSAMPLE_DIR / "{sample}.fastq",
         cluster_dir=CLUSTER_DETECTION_DIR / "{sample}"
     output:
         # Output directory will contain either:
-        # - sample.fastq (if no clusters)
-        # - sample_A.fastq, sample_B.fastq, etc. (if clusters found)
+        # - sample_A.fastq, sample_B.fastq, etc. (if multiple clusters)
+        # - no_split.txt (if single cluster or no clusters)
         outdir=directory(SPLIT_READS_DIR / "{sample}")
     params:
         sample="{sample}"

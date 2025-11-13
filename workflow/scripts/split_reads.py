@@ -48,7 +48,7 @@ def main():
     parser = argparse.ArgumentParser(description="Split reads by cluster assignment")
     parser.add_argument("fastq", help="Input subsampled FASTQ file")
     parser.add_argument("cluster_dir", help="Cluster detection output directory")
-    parser.add_argument("outdir", help="Output directory for split FASTQs")
+    parser.add_argument("outdir", help="Output directory for split FASTQs or marker")
     parser.add_argument("sample", help="Sample name")
     
     args = parser.parse_args()
@@ -62,11 +62,11 @@ def main():
     assignment_file = cluster_dir / "cluster_assignments.tsv"
     
     if no_clusters_file.exists():
-        # No clustering - just copy the input file
-        sys.stderr.write("No clusters detected - copying input file\n")
-        import shutil
-        shutil.copy(args.fastq, outdir / f"{args.sample}.fastq")
-        sys.stderr.write(f"Copied to {args.sample}.fastq\n")
+        # No clustering - create marker file (no split needed)
+        sys.stderr.write("No clusters detected - creating no_split marker\n")
+        marker = outdir / "no_split.txt"
+        marker.write_text("No cluster splitting performed - no clusters detected\n")
+        sys.stderr.write(f"Created marker file: {marker}\n")
         return
     
     if not assignment_file.exists():
@@ -81,10 +81,19 @@ def main():
     cluster_files = {}
     clusters_seen = set(assignments.values())
     
+    # Check if there's only one cluster - if so, create marker instead of splitting
+    if len(clusters_seen) == 1:
+        sys.stderr.write(f"Only one cluster detected ({list(clusters_seen)[0]}) - creating no_split marker\n")
+        marker = outdir / "no_split.txt"
+        marker.write_text(f"No cluster splitting performed - only one cluster ({list(clusters_seen)[0]}) detected\n")
+        sys.stderr.write(f"Created marker file: {marker}\n")
+        return
+    
+    # Multiple clusters - split reads into separate FASTQ files
     for cluster in sorted(clusters_seen):
         output_path = outdir / f"{args.sample}_{cluster}.fastq"
         cluster_files[cluster] = open(output_path, 'w')
-        sys.stderr.write(f"Writing cluster {cluster} to {output_path.name}\n")
+        sys.stderr.write(f"Writing cluster {cluster} to {output_path}\n")
     
     # Split reads
     reads_written = {cluster: 0 for cluster in clusters_seen}
