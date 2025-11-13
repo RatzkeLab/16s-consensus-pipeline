@@ -5,7 +5,8 @@
 
 # Input directory containing FASTQ files (*.fastq or *.fastq.gz)
 # if demultiplexing using minibar, make sure you have reversed backwards reads first
-input_dir: "demo/unflipped"
+# input_dir: "demo/unflipped"
+input_dir: "demo/unflipped_small"
 
 # Output directory for all results
 outdir: "demo/demo_output"
