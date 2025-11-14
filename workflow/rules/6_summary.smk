@@ -11,55 +11,6 @@ Upstream: preprocessing.smk (checkpoints), naive_consensus.smk (rule pool_naive)
 Downstream: None (terminal rule)
 """
 
-rule pairwise_edit_distance:
-    """
-    Calculate pairwise edit distances between all consensus sequences.
-    
-    Upstream: cluster_consensus.smk (rule pool_multi), naive_consensus.smk (rule pool_naive)
-    Downstream: None (analysis output)
-    
-    Computes edit distance (Levenshtein distance) between every pair of
-    consensus sequences. Can include both cluster subconsensuses and naive
-    consensuses if configured.
-    """
-    input:
-        multi_db = MULTI_DATABASE_FILE,
-        naive_db = NAIVE_DATABASE_FILE if PAIRWISE_DISTANCE_INCLUDE_NAIVE else []
-    output:
-        distances = PAIRWISE_DISTANCE_FILE
-    params:
-        ignore_first_n_bp = PAIRWISE_DISTANCE_IGNORE_FIRST_N_BP,
-        ignore_last_n_bp = PAIRWISE_DISTANCE_IGNORE_LAST_N_BP,
-        auto_trim = PAIRWISE_DISTANCE_AUTO_TRIM,
-        include_naive = PAIRWISE_DISTANCE_INCLUDE_NAIVE
-    conda:
-        "../envs/qc.yaml"
-    log:
-        LOG_DIR / "summary" / "pairwise_distances.log"
-    script:
-        "../scripts/pairwise_distances.py"
-
-
-rule pairwise_distance_heatmap:
-    """
-    Build a symmetric distance matrix from pairwise TSV, cluster it, and plot a heatmap.
-    
-    Upstream: pairwise_edit_distance
-    Downstream: None (analysis output)
-    """
-    input:
-        distances = PAIRWISE_DISTANCE_FILE
-    output:
-        matrix = PAIRWISE_DISTANCE_MATRIX_FILE,
-        heatmap = PAIRWISE_DISTANCE_HEATMAP_FILE
-    conda:
-        "../envs/qc.yaml"
-    log:
-        LOG_DIR / "summary" / "pairwise_heatmap.log"
-    script:
-        "../scripts/distance_heatmap.py"
-
-
 rule qc_alignment:
     """
     Create QC alignment of all consensus sequences using MAFFT.
@@ -85,6 +36,74 @@ rule qc_alignment:
         """
         mafft {params.mafft_flags} --thread {threads} {input.multi_db} > {output.alignment} 2> {log}
         """
+
+rule profile_from_qc_alignment:
+    """
+    Generate a profile (variant table) from the QC alignment with a generous MAF threshold (1%).
+    Includes nearly all columns/positions in the alignment.
+    """
+    input:
+        alignment = QC_ALIGNMENT_FILE
+    output:
+        profile = QC_DIR / "qc_alignment_profile.tsv"
+    params:
+        maf = 0.01
+    conda:
+        "../envs/qc.yaml"
+    log:
+        LOG_DIR / "summary" / "qc_alignment_profile.log"
+    shell:
+        """
+        python workflow/scripts/generate_profiles.py \
+          {input.alignment} \
+          {output.profile} \
+          --min_minor_freq {params.maf} \
+          --trim_bp 0 \
+          --compress_gaps \
+          2> {log}
+        """
+
+rule cluster_from_qc_profile:
+    """
+    Cluster the QC alignment profile and generate a clustering heatmap.
+    Uses a very inclusive profile (MAF >1%) to cluster all consensus sequences.
+    """
+    input:
+        profile = QC_DIR / "qc_alignment_profile.tsv"
+    output:
+        heatmap = QC_DIR / "qc_profile_clustering" / "qc_profile_clustering_heatmap.png"
+    params:
+        outdir = QC_DIR / "qc_profile_clustering"
+    conda:
+        "../envs/qc.yaml"
+    log:
+        LOG_DIR / "summary" / "qc_profile_clustering.log"
+    shell:
+        """
+        mkdir -p {params.outdir}
+    python workflow/scripts/cluster_from_profiles.py {input.profile} {params.outdir} --viz_out $(basename {output.heatmap}) 2> {log}
+        """
+
+
+rule pairwise_distance_heatmap:
+    """
+    Build a symmetric distance matrix from pairwise TSV, cluster it, and plot a heatmap.
+    
+    Upstream: pairwise_edit_distance
+    Downstream: None (analysis output)
+    """
+    input:
+        distances = PAIRWISE_DISTANCE_FILE
+    output:
+        matrix = PAIRWISE_DISTANCE_MATRIX_FILE,
+        heatmap = PAIRWISE_DISTANCE_HEATMAP_FILE
+    conda:
+        "../envs/qc.yaml"
+    log:
+        LOG_DIR / "summary" / "pairwise_heatmap.log"
+    script:
+        "../scripts/distance_heatmap.py"
+
 
 rule global_consensus:
     """
