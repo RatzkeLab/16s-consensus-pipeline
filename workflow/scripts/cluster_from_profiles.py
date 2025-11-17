@@ -166,6 +166,96 @@ def compute_cut_height(Z, max_clusters: int = 10):
     return float(cut_height), int(num_clusters)
 
 
+def plot_distance_heatmap(dist_matrix, headers, linkage_matrix, outpath, cluster_assignments=None):
+    """
+    Generate a heatmap of pairwise distances between reads.
+    
+    Args:
+        dist_matrix: Square distance matrix (numpy array)
+        headers: List of read IDs corresponding to matrix rows/columns
+        linkage_matrix: scipy linkage matrix for dendrograms
+        outpath: Output file path for the heatmap
+        cluster_assignments: Optional dict mapping read_id -> cluster_label for color annotation
+    """
+    import pandas as pd
+    
+    if len(headers) == 0:
+        sys.stderr.write("No reads to visualize in distance heatmap\n")
+        return
+    
+    # Create dataframe from distance matrix
+    df = pd.DataFrame(dist_matrix, index=headers, columns=headers)
+    
+    # Determine figure size based on number of reads
+    n = len(headers)
+    figsize = (max(10, 0.15 * n), max(8, 0.15 * n))
+    
+    # Create row colors if cluster assignments provided
+    row_colors = None
+    if cluster_assignments:
+        unique_clusters = sorted(set(cluster_assignments.values()))
+        palette_name = "tab10" if len(unique_clusters) <= 10 else "tab20"
+        color_palette = sns.color_palette(palette_name, n_colors=len(unique_clusters))
+        cluster_color_map = {cluster: color_palette[i] for i, cluster in enumerate(unique_clusters)}
+        
+        # Default color for unassigned reads (gray)
+        default_color = (0.7, 0.7, 0.7)
+        row_colors = [cluster_color_map.get(cluster_assignments.get(h), default_color) for h in headers]
+    
+    # Prepare trimmed labels for y-axis
+    labels_trunc = [h[:15] for h in headers]
+
+    # Create clustermap
+    try:
+        g = sns.clustermap(
+            df,
+            row_linkage=linkage_matrix,
+            col_linkage=linkage_matrix,
+            cmap="viridis",
+            figsize=figsize,
+            cbar_kws={'label': 'Hamming distance'},
+            dendrogram_ratio=0.15,
+            xticklabels=False,
+            yticklabels=True,
+            row_colors=row_colors,
+            colors_ratio=0.03 if row_colors else None
+        )
+        
+        g.ax_heatmap.set_xlabel("Reads")
+        g.ax_heatmap.set_ylabel("Reads")
+        g.ax_heatmap.set_title("Pairwise distance heatmap")
+
+        # Apply trimmed y tick labels in dendrogram order
+        try:
+            if hasattr(g, 'dendrogram_row') and hasattr(g.dendrogram_row, 'reordered_ind'):
+                order = g.dendrogram_row.reordered_ind
+                ordered_labels = [labels_trunc[i] for i in order]
+                g.ax_heatmap.set_yticklabels(ordered_labels, rotation=0)
+            else:
+                g.ax_heatmap.set_yticklabels(labels_trunc, rotation=0)
+            # Keep labels readable
+            n = len(labels_trunc)
+            g.ax_heatmap.tick_params(axis='y', labelsize=max(4, min(9, int(120 / max(n, 1)))))
+        except Exception as e:
+            sys.stderr.write(f"Warning: failed to set y-axis labels: {e}\n")
+        
+        # Add legend for cluster colors if provided
+        if row_colors and cluster_assignments:
+            from matplotlib.patches import Patch
+            unique_clusters = sorted(set(cluster_assignments.values()))
+            palette_name = "tab10" if len(unique_clusters) <= 10 else "tab20"
+            color_palette = sns.color_palette(palette_name, n_colors=len(unique_clusters))
+            cluster_color_map = {cluster: color_palette[i] for i, cluster in enumerate(unique_clusters)}
+            handles = [Patch(facecolor=cluster_color_map[c], edgecolor='none', label=str(c)) for c in unique_clusters]
+            g.fig.legend(handles, [str(c) for c in unique_clusters], loc='upper left', title='Cluster', frameon=False)
+        
+        plt.savefig(outpath, dpi=150, bbox_inches='tight')
+        plt.close()
+        sys.stderr.write(f"Wrote distance heatmap to {outpath}\n")
+    except Exception as e:
+        sys.stderr.write(f"Warning: Could not create distance heatmap: {e}\n")
+
+
 def plot_cluster_heatmap(dist_matrix, headers, linkage_matrix, outpath, cluster_assignments=None):
     """
     Plot a clustermap of the distance matrix.
@@ -314,7 +404,7 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
             cmap=cmap,
             norm=norm,
             xticklabels=True,
-            yticklabels=False,
+            yticklabels=True,
             figsize=figsize,
             dendrogram_ratio=0.15,
             cbar_pos=None,
@@ -325,6 +415,13 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
         ax.imshow(mat, aspect='auto', cmap=cmap, norm=norm, interpolation='nearest')
         ax.set_xlabel('Variable positions')
         ax.set_ylabel('Reads')
+        # Add trimmed y labels for fallback
+        try:
+            labels_trunc = [h[:15] for h in headers]
+            ax.set_yticks(range(len(labels_trunc)))
+            ax.set_yticklabels(labels_trunc, fontsize=max(4, min(9, int(120 / max(len(labels_trunc), 1)))))
+        except Exception:
+            pass
         ax.set_title("Profiles heatmap")
         # Write fallback figure
         out_path = Path(out_png)
@@ -353,7 +450,7 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
                 cmap=cmap,
                 norm=norm,
                 xticklabels=True,
-                yticklabels=False,
+                yticklabels=True,
                 figsize=figsize,
                 dendrogram_ratio=0.15,
                 cbar_pos=None,
@@ -368,6 +465,16 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
         g.ax_heatmap.tick_params(axis='x', labelsize=max(4, min(8, 60 / max(w, 1))), rotation=90)
     except Exception as e:
         sys.stderr.write(f"Warning: failed to adjust x-axis labels: {e}\n")
+
+    # Add trimmed y-axis labels based on dendrogram row order
+    try:
+        labels_trunc = [h[:15] for h in headers]
+        row_order = g.dendrogram_row.reordered_ind if (linkage_matrix is not None and hasattr(g, 'dendrogram_row')) else list(range(h))
+        ordered_labels = [labels_trunc[i] for i in row_order]
+        g.ax_heatmap.set_yticklabels(ordered_labels, rotation=0)
+        g.ax_heatmap.tick_params(axis='y', labelsize=max(4, min(9, int(120 / max(h, 1)))))
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to set y-axis labels: {e}\n")
 
     # Overlay text labels on heatmap
     try:
@@ -439,6 +546,8 @@ def main():
                         help="Maximum number of clusters to detect")
     parser.add_argument("--min_variable_positions", type=int, default=3,
                         help="Minimum number of variable positions required to attempt clustering")
+    parser.add_argument("--min_reads_to_cluster", type=int, default=None,
+                        help="Minimum number of reads required to attempt clustering. Default is 2 * min_cluster_size.")
     
     args = parser.parse_args()
     
@@ -478,9 +587,12 @@ def main():
                 sys.stderr.write(f"Warning: failed to write trivial viz: {e}\n")
         return
     
+    # Determine minimum reads required (configurable)
+    min_reads_required = args.min_reads_to_cluster if args.min_reads_to_cluster is not None else (args.min_cluster_size * 2)
+
     # Check if we have enough sequences for clustering
-    if len(profiles) < args.min_cluster_size * 2:
-        sys.stderr.write(f"Too few sequences for clustering ({len(profiles)} < {args.min_cluster_size * 2})\n")
+    if len(profiles) < min_reads_required:
+        sys.stderr.write(f"Too few sequences for clustering ({len(profiles)} < {min_reads_required})\n")
         with open(outdir / "no_clusters.txt", "w") as f:
             f.write("single_cluster\n")
         sys.stderr.write("No clustering performed - single cluster\n")
@@ -517,19 +629,30 @@ def main():
     # Build cluster assignments for visualization (valid clusters only)
     headers = list(profiles.keys())
     cluster_assignments = {}
-    if len(valid_clusters) > 0:
+    if len(valid_clusters) > 1:
         cluster_labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         for i, cluster in enumerate(sorted(valid_clusters, key=len, reverse=True)):
             label = cluster_labels[i] if i < len(cluster_labels) else str(i)
             for read_id in sorted(cluster):
                 cluster_assignments[read_id] = label
 
+    # Generate distance heatmap
+    distance_heatmap_path = outdir / "distance_heatmap.png"
+    try:
+        # Fallback to zero matrix if no distances available (e.g., single read)
+        if dist_matrix is None:
+            dist_matrix = np.zeros((len(headers), len(headers)))
+        plot_distance_heatmap(dist_matrix, headers, linkage_matrix, distance_heatmap_path, cluster_assignments=cluster_assignments if cluster_assignments else None)
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to generate distance heatmap: {e}\n")
+    
     # Produce integrated visualization (with side color bar) if requested
     if viz_out_path:
         try:
             plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, viz_out_path, cluster_assignments=cluster_assignments)
         except Exception as e:
             sys.stderr.write(f"Warning: failed to generate integrated viz: {e}\n")
+    
     if len(valid_clusters) < 2:
         sys.stderr.write("Only one valid cluster - no subclustering\n")
         with open(outdir / "no_clusters.txt", "w") as f:
@@ -540,6 +663,7 @@ def main():
     # Multiple clusters found - write cluster assignments
     sys.stderr.write(f"Multiple clusters detected ({len(valid_clusters)} clusters)\n")
     
+    cluster_labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     with open(outdir / "cluster_assignments.tsv", "w") as f:
         f.write("read_id\tcluster\n")
         for i, cluster in enumerate(sorted(valid_clusters, key=len, reverse=True)):

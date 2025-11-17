@@ -27,8 +27,9 @@ rule all:
         NAIVE_DATABASE_FILE,
         MULTI_DATABASE_FILE,
         # Analysis outputs
-        PAIRWISE_DISTANCE_HEATMAP_FILE,
         QC_ALIGNMENT_FILE,
+        QC_PROFILE_CLUSTERING_HEATMAP,
+        QC_PROFILE_DISTANCE_HEATMAP,
         # Summary report
         PIPELINE_SUMMARY_FILE,
         QC_DIR / "global_consensus.fasta"

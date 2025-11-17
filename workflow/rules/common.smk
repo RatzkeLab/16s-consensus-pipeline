@@ -108,8 +108,9 @@ MULTI_DATABASE_FILE = OUT_DIR / config.get("multi_database_filename", "multi_db.
 PAIRWISE_DISTANCE_FILE = QC_DIR / "pairwise_distances.tsv"
 QC_ALIGNMENT_FILE = QC_DIR / "consensus_qc_alignment.fasta"
 PAIRWISE_DISTANCE_MATRIX_FILE = QC_DIR / "pairwise_distance_matrix.tsv"
-PAIRWISE_DISTANCE_HEATMAP_FILE = QC_DIR / "pairwise_distance_heatmap.png"
 PIPELINE_SUMMARY_FILE = QC_DIR / "pipeline_summary.md"
+QC_PROFILE_CLUSTERING_HEATMAP = QC_DIR / "qc_profile_clustering" / "qc_profile_clustering_heatmap.png"
+QC_PROFILE_DISTANCE_HEATMAP = QC_DIR / "qc_profile_clustering" / "distance_heatmap.png"
 
 # ==================== Helper Functions (Wrappers) ====================
 # See common_helpers.py for base functions

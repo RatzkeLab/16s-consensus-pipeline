@@ -71,7 +71,8 @@ rule cluster_from_qc_profile:
     input:
         profile = QC_DIR / "qc_alignment_profile.tsv"
     output:
-        heatmap = QC_DIR / "qc_profile_clustering" / "qc_profile_clustering_heatmap.png"
+        heatmap = QC_DIR / "qc_profile_clustering" / "qc_profile_clustering_heatmap.png",
+        distance_heatmap = QC_DIR / "qc_profile_clustering" / "distance_heatmap.png"
     params:
         outdir = QC_DIR / "qc_profile_clustering"
     conda:
@@ -81,28 +82,14 @@ rule cluster_from_qc_profile:
     shell:
         """
         mkdir -p {params.outdir}
-    python workflow/scripts/cluster_from_profiles.py {input.profile} {params.outdir} --viz_out $(basename {output.heatmap}) 2> {log}
+        python workflow/scripts/cluster_from_profiles.py \
+            {input.profile} \
+            {params.outdir} \
+            --viz_out $(basename {output.heatmap}) \
+            --min_variable_positions 1 \
+            --min_reads_to_cluster 1 \
+            2> {log}
         """
-
-
-rule pairwise_distance_heatmap:
-    """
-    Build a symmetric distance matrix from pairwise TSV, cluster it, and plot a heatmap.
-    
-    Upstream: pairwise_edit_distance
-    Downstream: None (analysis output)
-    """
-    input:
-        distances = PAIRWISE_DISTANCE_FILE
-    output:
-        matrix = PAIRWISE_DISTANCE_MATRIX_FILE,
-        heatmap = PAIRWISE_DISTANCE_HEATMAP_FILE
-    conda:
-        "../envs/qc.yaml"
-    log:
-        LOG_DIR / "summary" / "pairwise_heatmap.log"
-    script:
-        "../scripts/distance_heatmap.py"
 
 
 rule global_consensus:
