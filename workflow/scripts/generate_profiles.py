@@ -14,11 +14,6 @@ from pathlib import Path
 from collections import Counter
 import numpy as np
 
-# Import common helper
-sys.path.insert(0, str(Path(__file__).parent))
-from common_helpers import calculate_auto_trim
-
-
 def read_fasta(path):
     """Read FASTA alignment and return dict of {header: sequence}.
     
@@ -118,6 +113,54 @@ def mark_gap_extensions(seqs, gap_char='-', extension_char='.'):
         compressed[header] = ''.join(seq_array)
     
     return compressed
+
+
+def calculate_auto_trim(sequences):
+    """
+    Calculate auto-trim values based on longest leading/trailing gaps.
+    
+    Returns the position of the first non-gap character in the sequence with
+    the longest leading gap, and the position of the last non-gap character
+    in the sequence with the longest trailing gap.
+
+    Used both in common_helpers.py and pairwise_distances.py.
+    
+    Args:
+        sequences: Dictionary or iterable of sequences (aligned)
+    
+    Returns:
+        tuple: (trim_start, trim_end) - number of positions to trim from start and end
+    """
+    if not sequences:
+        return 0, 0
+    
+    # Handle both dict and list inputs
+    seq_values = sequences.values() if isinstance(sequences, dict) else sequences
+    
+    max_leading_gaps = 0
+    max_trailing_gaps = 0
+    
+    for seq in seq_values:
+        # Count leading gaps
+        leading = 0
+        for char in seq:
+            if char == '-':
+                leading += 1
+            else:
+                break
+        
+        # Count trailing gaps
+        trailing = 0
+        for char in reversed(seq):
+            if char == '-':
+                trailing += 1
+            else:
+                break
+        
+        max_leading_gaps = max(max_leading_gaps, leading)
+        max_trailing_gaps = max(max_trailing_gaps, trailing)
+    
+    return max_leading_gaps, max_trailing_gaps
 
 
 def identify_variable_positions(seqs, min_minor_freq, trim_bp=70, auto_trim=True, compress_gaps=True, 
