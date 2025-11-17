@@ -6,6 +6,31 @@ This script:
 1. Identifies variable positions in alignment
 2. Creates per-read profiles based on those positions
 3. Outputs profiles and metadata for downstream clustering
+
+=====Script Structure=====
+11 total functions organized into sections:
+
+Utility Functions:
+  1. log()                     - Centralized logging
+
+File I/O Functions:
+  2. read_fasta()              - BioPython FASTA reading
+  3. seqs_to_array()           - Dict to numpy conversion
+  4. array_to_seqs()           - Numpy to dict conversion
+  5. validate_alignment()      - Validation logic
+
+Processing Functions:
+  6. mark_gap_extensions()     - Vectorized gap compression
+  7. calculate_auto_trim()     - Vectorized trim calculation
+  8. identify_variable_positions() - Optimized position finding
+  9. create_read_profiles()    - Vectorized profile generation
+
+Output Functions:
+  10. log_parameters()         - Parameter logging
+  11. write_profiles_tsv()     - Batch TSV writing
+
+Main:
+  12. main()                   - Clean workflow orchestration
 """
 
 import sys
@@ -13,32 +38,53 @@ import argparse
 from pathlib import Path
 from collections import Counter
 import numpy as np
+from Bio import SeqIO
+
+
+# ==================== Utility Functions ====================
+
+def log(msg):
+    """Simple stderr logger with newline."""
+    sys.stderr.write(f"{msg}\n")
+
+
+# ==================== File I/O Functions ====================
 
 def read_fasta(path):
-    """Read FASTA alignment and return dict of {header: sequence}.
+    """Read FASTA alignment using BioPython and return dict of {header: sequence}.
     
-    Optimized to build sequences character-by-character with list.extend()
-    and single join at the end per sequence.
+    Uses BioPython's optimized C-based parser for faster reading.
+    Returns sequences as uppercase strings.
     """
     seqs = {}
     with open(path) as f:
-        header = None
-        seq_chars = []
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith(">"):
-                if header is not None:
-                    seqs[header] = ''.join(seq_chars)
-                header = line[1:]
-                seq_chars = []
-            else:
-                # Extend with uppercase characters (no intermediate strings)
-                seq_chars.extend(line.upper())
-        if header is not None:
-            seqs[header] = ''.join(seq_chars)
+        for record in SeqIO.parse(f, "fasta"):
+            seqs[record.id] = str(record.seq).upper()
     return seqs
+
+
+def seqs_to_array(seqs):
+    """Convert sequence dictionary to numpy array and headers list.
+    
+    Returns:
+        tuple: (headers_list, seq_array) where seq_array is 2D numpy array
+    """
+    headers = list(seqs.keys())
+    seq_array = np.array([list(seq) for seq in seqs.values()], dtype='U1')
+    return headers, seq_array
+
+
+def array_to_seqs(headers, seq_array):
+    """Convert numpy array back to sequence dictionary.
+    
+    Args:
+        headers: List of sequence headers
+        seq_array: 2D numpy array of sequences
+    
+    Returns:
+        Dictionary of {header: sequence}
+    """
+    return {header: ''.join(seq_array[i]) for i, header in enumerate(headers)}
 
 
 def validate_alignment(seqs):
@@ -70,13 +116,14 @@ def validate_alignment(seqs):
         raise ValueError(error_msg)
     
     aln_len = lengths.pop()
-    sys.stderr.write(f"Validated alignment: {len(seqs)} sequences, each {aln_len} bp\n")
+    log(f"Validated alignment: {len(seqs)} sequences, each {aln_len} bp")
     return aln_len
 
 
-def mark_gap_extensions(seqs, gap_char='-', extension_char='.'):
+def mark_gap_extensions(seq_array, gap_char='-', extension_char='.'):
     """Prepare sequences with gap runs by marking continuation gaps with '.'.
     
+    Operates directly on numpy array for efficiency.
     Replaces all gaps after the first in each consecutive gap run with '.'.
     This reduces the weight of long gaps in distance calculations while still
     penalizing the gap event itself.
@@ -84,176 +131,206 @@ def mark_gap_extensions(seqs, gap_char='-', extension_char='.'):
     Example: 'A---T' becomes 'A-..T'
     
     Args:
-        seqs: Dictionary of {header: sequence}
+        seq_array: 2D numpy array of sequences (rows=seqs, cols=positions)
         gap_char: Character representing gaps (default: '-')
         extension_char: Character to mark continuation gaps (default: '.')
     
     Returns:
-        Dictionary of {header: modified_sequence}
+        Modified 2D numpy array (operates in-place but also returns)
     """
-    compressed = {}
+    # Vectorized operations across all sequences at once
+    is_gap = seq_array == gap_char
     
-    for header, seq in seqs.items():
-        # Convert to numpy array for vectorized operations
-        seq_array = np.array(list(seq), dtype='U1')
-        
-        # Find gap positions
-        is_gap = seq_array == gap_char
-        
-        # Find where gaps start (gap with no gap before)
-        gap_starts = is_gap.copy()
-        gap_starts[1:] = is_gap[1:] & ~is_gap[:-1]
-        
-        # Mark continuation gaps (gaps that aren't starts)
-        continuation_gaps = is_gap & ~gap_starts
-        
-        # Replace continuation gaps with extension character
-        seq_array[continuation_gaps] = extension_char
-        
-        compressed[header] = ''.join(seq_array)
+    # Find where gaps start (gap with no gap before)
+    gap_starts = is_gap.copy()
+    gap_starts[:, 1:] = is_gap[:, 1:] & ~is_gap[:, :-1]
     
-    return compressed
+    # Mark continuation gaps (gaps that aren't starts)
+    continuation_gaps = is_gap & ~gap_starts
+    
+    # Replace continuation gaps with extension character
+    seq_array[continuation_gaps] = extension_char
+    
+    return seq_array
 
 
-def calculate_auto_trim(sequences):
+def calculate_auto_trim(seq_array):
     """
     Calculate auto-trim values based on longest leading/trailing gaps.
     
+    Vectorized implementation using numpy for efficiency.
     Returns the position of the first non-gap character in the sequence with
     the longest leading gap, and the position of the last non-gap character
     in the sequence with the longest trailing gap.
-
-    Used both in common_helpers.py and pairwise_distances.py.
     
     Args:
-        sequences: Dictionary or iterable of sequences (aligned)
+        seq_array: 2D numpy array of sequences (rows=seqs, cols=positions)
     
     Returns:
         tuple: (trim_start, trim_end) - number of positions to trim from start and end
     """
-    if not sequences:
+    if seq_array.size == 0:
         return 0, 0
     
-    # Handle both dict and list inputs
-    seq_values = sequences.values() if isinstance(sequences, dict) else sequences
+    # Find gap positions
+    is_gap = seq_array == '-'
     
-    max_leading_gaps = 0
-    max_trailing_gaps = 0
+    # Find first non-gap position in each sequence
+    # argmax finds first True in ~is_gap (first non-gap)
+    has_non_gap = np.any(~is_gap, axis=1)
+    first_non_gap = np.where(has_non_gap, np.argmax(~is_gap, axis=1), seq_array.shape[1])
+    max_leading_gaps = int(first_non_gap.max())
     
-    for seq in seq_values:
-        # Count leading gaps
-        leading = 0
-        for char in seq:
-            if char == '-':
-                leading += 1
-            else:
-                break
-        
-        # Count trailing gaps
-        trailing = 0
-        for char in reversed(seq):
-            if char == '-':
-                trailing += 1
-            else:
-                break
-        
-        max_leading_gaps = max(max_leading_gaps, leading)
-        max_trailing_gaps = max(max_trailing_gaps, trailing)
+    # Find last non-gap position in each sequence (search from right)
+    # Reverse columns, find first non-gap, convert back to original position
+    last_non_gap_from_end = np.where(has_non_gap, np.argmax(~is_gap[:, ::-1], axis=1), seq_array.shape[1])
+    max_trailing_gaps = int(last_non_gap_from_end.max())
     
     return max_leading_gaps, max_trailing_gaps
 
+def compute_trim_bounds(seq_array, auto_trim=True, trim_bp=70, min_trim=50, max_trim=250):
+    """Compute start and end bounds (exclusive end) for variable position analysis.
 
-def identify_variable_positions(seqs, min_minor_freq, trim_bp=70, auto_trim=True, compress_gaps=True, 
-                               min_trim=50, max_trim=250):
-    """Identify positions where the second-most-common allele is above threshold.
-    
-    Uses numpy for vectorized operations on large alignments.
-    
+    Centralizes all trim logic so downstream functions receive explicit bounds.
+
     Args:
-        seqs: Dictionary of sequences
-        min_minor_freq: Minimum frequency for second-most-common allele (default: 0.05)
-        trim_bp: Number of bp to ignore at start and end of alignment (default: 70)
-        auto_trim: If True, automatically calculate trim values based on alignment gaps
-        compress_gaps: If True, filter out '.' (gap continuation marker) when it's in top 2 most common
-        min_trim: Minimum trim value - auto_trim cannot trim less than this (default: 50)
-        max_trim: Maximum trim value - auto_trim cannot trim more than this (default: 250)
+        seq_array: 2D numpy array of sequences
+        auto_trim: Use gap-derived automatic trimming if True
+        trim_bp: Manual trim value (used if auto_trim False)
+        min_trim: Minimum allowed trim (for auto mode)
+        max_trim: Maximum allowed trim (for auto mode)
+
+    Returns:
+        tuple: (start_pos, end_pos, trim_start, trim_end, mode_str)
     """
-    if not seqs:
-        return []
-    
-    # Convert sequences to numpy array for vectorized operations
-    seq_list = list(seqs.values())
-    aln_len = len(seq_list[0])
-    n_seqs = len(seq_list)
-    
-    # Create 2D array: rows = sequences, cols = positions
-    # Use Unicode strings with max length 1
-    seq_array = np.array([list(seq) for seq in seq_list], dtype='U1')
-    
-    variable_positions = []
-    
-    # Calculate trim values
+    n_seqs, aln_len = seq_array.shape if seq_array.size else (0, 0)
+    if seq_array.size == 0:
+        return 0, 0, 0, 0, "empty"
     if auto_trim:
-        auto_trim_start, auto_trim_end = calculate_auto_trim(seqs)
-        # Constrain auto-trim to be between min_trim and max_trim
-        trim_start = max(min_trim, min(auto_trim_start, max_trim))
-        trim_end = max(min_trim, min(auto_trim_end, max_trim))
-        sys.stderr.write(f"Auto-trim detected: {auto_trim_start} bp (start), {auto_trim_end} bp (end)\n")
-        sys.stderr.write(f"Applied trim (constrained to [{min_trim}, {max_trim}]): "
-                        f"{trim_start} bp (start), {trim_end} bp (end)\n")
+        raw_start, raw_end = calculate_auto_trim(seq_array)
+        trim_start = max(min_trim, min(raw_start, max_trim))
+        trim_end = max(min_trim, min(raw_end, max_trim))
+        mode = "auto"
+        log(f"Auto-trim detected: {raw_start} bp (start), {raw_end} bp (end)")
+        log(f"Applied trim (constrained to [{min_trim}, {max_trim}]): {trim_start} bp (start), {trim_end} bp (end)")
     else:
         trim_start = trim_bp
         trim_end = trim_bp
-        sys.stderr.write(f"Manual trim: ignoring first {trim_start} bp and last {trim_end} bp\n")
-    
-    # Define the region to analyze (excluding trimmed regions)
+        mode = "manual"
+        log(f"Manual trim: ignoring first {trim_start} bp and last {trim_end} bp")
     start_pos = trim_start
-    end_pos = aln_len - trim_end
-    
-    sys.stderr.write(f"Analyzing positions {start_pos} to {end_pos}\n")
+    end_pos = max(start_pos, aln_len - trim_end)  # ensure non-negative region
+    log(f"Analysis bounds: positions {start_pos}..{end_pos} (alignment length {aln_len})")
+    return start_pos, end_pos, trim_start, trim_end, mode
 
-    # Iterate over each position in the alignment, and save variable positions
-    for pos in range(start_pos, end_pos):
-        column = seq_array[:, pos]
-        
-        # Get unique characters and their counts
+
+def identify_variable_positions(seq_array, start_pos, end_pos, min_minor_freq, compress_gaps=True):
+    """Identify positions whose second-most-common allele frequency >= threshold.
+
+    Args:
+        seq_array: 2D numpy array of sequences
+        start_pos: Starting column index (inclusive)
+        end_pos: Ending column index (exclusive)
+        min_minor_freq: Threshold for second-most-common allele frequency
+        compress_gaps: Skip positions where '.' is among top 2 alleles
+
+    Returns:
+        List of variable position indices (original alignment coordinates)
+    """
+    if seq_array.size == 0 or end_pos <= start_pos:
+        return []
+    n_seqs, _ = seq_array.shape
+    region = seq_array[:, start_pos:end_pos]
+    variable_positions = []
+    # Iterate columns (vectorizing unique-with-count across all columns is non-trivial)
+    for offset, pos in enumerate(range(start_pos, end_pos)):
+        column = region[:, offset]
         unique, counts = np.unique(column, return_counts=True)
-
-        if len(unique) < 2: 
-            # Only one character type at this position
+        if len(unique) < 2:
             continue
-
-        # Sort by count (descending)
-        sorted_indices = np.argsort(counts)[::-1]
-        sorted_counts = counts[sorted_indices]
-        
-        # Check second-most-common frequency
-        second_count = sorted_counts[1]
-        second_freq = second_count / len(column)
-
-        # If compress_gaps is enabled, check if '.' is in top 2 most common
-        # Filter it out if so
-        if compress_gaps:
-            if '.' in unique:
-                # Get top 2 by count
-                top_2_chars = unique[sorted_indices[:2]]
-                if '.' in top_2_chars:
-                    # skip this position, as gap continuation is prevalent
-                    continue
-        
-        if second_freq >= min_minor_freq:
+        if len(counts) == 2:
+            sorted_idx = np.argsort(counts)[::-1]
+            second_count = counts[sorted_idx[1]]
+            top_2_chars = unique[sorted_idx[:2]]
+        else:
+            top_2_idx = np.argpartition(counts, -2)[-2:]
+            sorted_top_2 = top_2_idx[np.argsort(counts[top_2_idx])[::-1]]
+            second_count = counts[sorted_top_2[1]]
+            top_2_chars = unique[sorted_top_2]
+        if compress_gaps and '.' in top_2_chars:
+            continue
+        if (second_count / n_seqs) >= min_minor_freq:
             variable_positions.append(pos)
-    
     return variable_positions
 
 
-def create_read_profiles(seqs, variable_positions):
-    """Create profile for each read based on variable positions."""
-    profiles = {}
-    for header, seq in seqs.items():
-        profile = tuple(seq[pos] for pos in variable_positions)
-        profiles[header] = profile
+def create_read_profiles(seq_array, headers, variable_positions):
+    """Create profile for each read based on variable positions.
+    
+    Works directly with numpy array for efficiency.
+    
+    Args:
+        seq_array: 2D numpy array of sequences
+        headers: List of sequence headers
+        variable_positions: List of positions to extract
+    
+    Returns:
+        Dictionary of {header: profile_tuple}
+    """
+    if not variable_positions:
+        return {header: tuple() for header in headers}
+    
+    # Extract variable positions for all sequences at once (fancy indexing)
+    var_pos_array = np.array(variable_positions)
+    profiles_array = seq_array[:, var_pos_array]
+    
+    # Convert to dictionary of tuples
+    profiles = {header: tuple(profiles_array[i]) for i, header in enumerate(headers)}
+    
     return profiles
+
+
+def log_parameters(args):
+    """Log parameters to stderr."""
+    log("=" * 60)
+    log("Generate Read Profiles - Parameters")
+    log("=" * 60)
+    log(f"Input alignment: {args.alignment}")
+    log(f"Output file: {args.output}")
+    log(f"Min minor allele frequency: {args.min_minor_freq}")
+    log(f"Trim mode: {'auto' if args.auto_trim else 'manual'}")
+    if args.auto_trim:
+        log(f"  Min trim: {args.min_trim} bp")
+        log(f"  Max trim: {args.max_trim} bp")
+    else:
+        log(f"  Trim: {args.trim_bp} bp")
+    log(f"Compress gaps: {args.compress_gaps}")
+    log("=" * 60)
+    log("")
+
+
+def write_profiles_tsv(output_path, profiles, variable_positions):
+    """Write profiles to TSV file with batch writing for performance.
+    
+    Args:
+        output_path: Path object for output file
+        profiles: Dictionary of {read_id: profile_tuple}
+        variable_positions: List of variable position indices
+    """
+    log("Writing profiles to TSV...")
+    
+    # Build all lines in memory first
+    lines = ["read_id\t" + "\t".join(f"pos_{p}" for p in variable_positions)]
+    
+    for read_id in sorted(profiles.keys()):
+        profile = profiles[read_id]
+        lines.append(f"{read_id}\t" + "\t".join(profile))
+    
+    # Single write operation
+    with open(output_path, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    
+    log(f"Wrote {len(profiles)} read profiles to {output_path}")
 
 
 def main():
@@ -276,75 +353,66 @@ def main():
     args = parser.parse_args()
     
     # Log parameters
-    sys.stderr.write("=" * 60 + "\n")
-    sys.stderr.write("Generate Read Profiles - Parameters\n")
-    sys.stderr.write("=" * 60 + "\n")
-    sys.stderr.write(f"Input alignment: {args.alignment}\n")
-    sys.stderr.write(f"Output file: {args.output}\n")
-    sys.stderr.write(f"Min minor allele frequency: {args.min_minor_freq}\n")
-    sys.stderr.write(f"Trim mode: {'auto' if args.auto_trim else 'manual'}\n")
-    if args.auto_trim:
-        sys.stderr.write(f"  Min trim: {args.min_trim} bp\n")
-        sys.stderr.write(f"  Max trim: {args.max_trim} bp\n")
-    else:
-        sys.stderr.write(f"  Trim: {args.trim_bp} bp\n")
-    sys.stderr.write(f"Compress gaps: {args.compress_gaps}\n")
-    sys.stderr.write("=" * 60 + "\n\n")
+    log_parameters(args)
     
-    # Read alignment
-    sys.stderr.write("Reading alignment...\n")
+    # Read and validate alignment
+    log("Reading alignment...")
     seqs = read_fasta(args.alignment)
-    sys.stderr.write(f"Loaded {len(seqs)} sequences from alignment\n")
+    log(f"Loaded {len(seqs)} sequences from alignment")
     
-    # Validate alignment
     try:
         aln_len = validate_alignment(seqs)
     except ValueError as e:
-        sys.stderr.write(f"ERROR: {e}\n")
+        log(f"ERROR: {e}")
         sys.exit(1)
     
     # Ensure output directory exists
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
+    # Convert to numpy array once for efficiency
+    log("\nConverting sequences to numpy array...")
+    headers, seq_array = seqs_to_array(seqs)
+    
     # Compress gap runs if requested
     if args.compress_gaps:
-        sys.stderr.write("\nCompressing gap runs (marking continuation gaps with '.')\n")
-        seqs = mark_gap_extensions(seqs)
+        log("Compressing gap runs (marking continuation gaps with '.')")
+        seq_array = mark_gap_extensions(seq_array)
     
-    # Identify variable positions
-    sys.stderr.write("\nIdentifying variable positions...\n")
-    variable_positions = identify_variable_positions(
-        seqs, args.min_minor_freq, args.trim_bp, args.auto_trim, args.compress_gaps,
-        args.min_trim, args.max_trim
+    # Compute trim bounds then identify variable positions
+    log("\nComputing trim bounds...")
+    start_pos, end_pos, trim_start, trim_end, trim_mode = compute_trim_bounds(
+        seq_array,
+        auto_trim=args.auto_trim,
+        trim_bp=args.trim_bp,
+        min_trim=args.min_trim,
+        max_trim=args.max_trim,
     )
-    sys.stderr.write(f"Found {len(variable_positions)} variable positions "
-                    f"(threshold: second allele >= {args.min_minor_freq})\n")
+    log("\nIdentifying variable positions...")
+    variable_positions = identify_variable_positions(
+        seq_array, start_pos, end_pos, args.min_minor_freq, args.compress_gaps
+    )
+    log(f"Found {len(variable_positions)} variable positions (mode={trim_mode}, bounds {start_pos}..{end_pos}, threshold second allele >= {args.min_minor_freq})")
     
+    # Warn about edge cases
     if len(variable_positions) == 0:
-        sys.stderr.write("WARNING: No variable positions found - all profiles will be identical\n")
+        log("WARNING: No variable positions found - all profiles will be identical")
     elif len(variable_positions) < 5:
-        sys.stderr.write(f"NOTE: Only {len(variable_positions)} variable positions found - "
-                        f"clustering may have limited resolution\n")
+        log(f"NOTE: Only {len(variable_positions)} variable positions found - "
+            f"clustering may have limited resolution")
     
-    # Create profiles (even if empty - let clustering script decide what to do)
-    sys.stderr.write("\nGenerating per-read profiles...\n")
-    profiles = create_read_profiles(seqs, variable_positions)
+    # Create profiles
+    log("\nGenerating per-read profiles...")
+    profiles = create_read_profiles(seq_array, headers, variable_positions)
     
-    # Write read profiles to TSV
-    with open(output_path, "w") as f:
-        # Header: read_id, then each variable position
-        f.write("read_id\t" + "\t".join(f"pos_{p}" for p in variable_positions) + "\n")
-        
-        # Each read's profile
-        for read_id in sorted(profiles.keys()):
-            profile = profiles[read_id]
-            f.write(f"{read_id}\t" + "\t".join(profile) + "\n")
+    # Write output
+    log("")
+    write_profiles_tsv(output_path, profiles, variable_positions)
     
-    sys.stderr.write(f"Wrote {len(profiles)} read profiles to {output_path}\n")
-    sys.stderr.write("\n" + "=" * 60 + "\n")
-    sys.stderr.write("Profile generation complete\n")
-    sys.stderr.write("=" * 60 + "\n")
+    # Completion message
+    log("\n" + "=" * 60)
+    log("Profile generation complete")
+    log("=" * 60)
 
 
 if __name__ == "__main__":
