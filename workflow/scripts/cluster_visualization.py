@@ -85,22 +85,25 @@ def plot_distance_heatmap(dist_matrix, headers, linkage_matrix, outpath, cluster
 
 # -------------------- Profile heatmap --------------------
 
-def profiles_to_numeric_matrix(headers, variable_positions, profiles):
-    """Convert categorical profiles to a numeric matrix and return a colormap/norm.
+def profiles_to_numeric_matrix(profiles_array):
+    """Convert categorical profiles array to a numeric matrix and return a colormap/norm.
+
+    Args:
+        profiles_array: (n_reads, n_positions) numpy array of ASCII bytes (dtype='S1')
 
     Returns (matrix (n_reads x n_positions), cmap, norm, legend_labels)
     """
     from matplotlib.colors import ListedColormap, BoundaryNorm
     symbols = ['A', 'C', 'G', 'T', '-', '.', 'N']
-    sym_index = {s: i for i, s in enumerate(symbols)}
+    sym_bytes = [s.encode('ascii') for s in symbols]
+    sym_index = {s: i for i, s in enumerate(sym_bytes)}
     unknown_idx = len(symbols)
-    n = len(headers)
-    m = len(variable_positions)
-    mat = np.zeros((n, m), dtype=int)
-    for i, h in enumerate(headers):
-        prof = profiles[h]
-        row = [sym_index.get(ch, unknown_idx) for ch in prof]
-        mat[i, :] = row
+    
+    # Vectorized mapping
+    mat = np.full(profiles_array.shape, unknown_idx, dtype=int)
+    for i, byte_sym in enumerate(sym_bytes):
+        mat[profiles_array == byte_sym] = i
+    
     colors = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#bdbdbd", "#aaaaaa", "#000000"]
     cmap = ListedColormap(colors)
     norm = BoundaryNorm(np.arange(-0.5, len(colors) + 0.5), len(colors))
@@ -122,21 +125,28 @@ def write_trivial_profiles_viz(out_png, message):
         log(f"Warning: failed to write trivial profiles viz: {e}")
 
 
-def overlay_profile_text(g, profiles, headers):
-    """Overlay per-position characters on existing clustermap heatmap."""
+def overlay_profile_text(g, profiles_array, headers):
+    """Overlay per-position characters on existing clustermap heatmap.
+    
+    Args:
+        g: seaborn clustermap object
+        profiles_array: (n_reads, n_positions) numpy array (dtype='S1')
+        headers: list of read IDs
+    """
     try:
         h = len(headers)
         if h == 0:
             return
         row_order = g.dendrogram_row.reordered_ind if hasattr(g, 'dendrogram_row') else list(range(h))
-        w = len(next(iter(profiles.values()))) if profiles else 0
+        w = profiles_array.shape[1] if profiles_array.size > 0 else 0
         fontsize = max(3, min(8, 50 / max(h, w, 1)))
         for i in range(h):
             orig_row_idx = row_order[i] if i < len(row_order) else i
             if orig_row_idx >= len(headers):
                 continue
-            prof = profiles[headers[orig_row_idx]]
-            for j, letter in enumerate(prof):
+            prof_bytes = profiles_array[orig_row_idx, :]
+            for j, byte_letter in enumerate(prof_bytes):
+                letter = byte_letter.decode('ascii') if isinstance(byte_letter, bytes) else str(byte_letter)
                 g.ax_heatmap.text(j + 0.5, i + 0.5, letter,
                                   ha="center", va="center",
                                   color="white" if letter not in ['.', 'N'] else "black",
@@ -175,14 +185,23 @@ def add_symbol_legend(g, legend_labels):
         pass
 
 
-def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, out_png, cluster_assignments=None):
-    """Plot profile categorical clustermap with dendrogram and optional cluster side colors."""
+def plot_profiles_clustermap(headers, profiles_array, variable_positions, linkage_matrix, out_png, cluster_assignments=None):
+    """Plot profile categorical clustermap with dendrogram and optional cluster side colors.
+    
+    Args:
+        headers: list of read IDs
+        profiles_array: (n_reads, n_positions) numpy array (dtype='S1')
+        variable_positions: list of position numbers
+        linkage_matrix: scipy linkage matrix
+        out_png: output file path
+        cluster_assignments: optional dict mapping read_id -> cluster_label
+    """
     from matplotlib.patches import Patch  # noqa: F401 (used indirectly)
     if len(headers) == 0 or len(variable_positions) == 0:
         write_trivial_profiles_viz(out_png, "No reads to visualize" if len(headers) == 0 else "No variable positions to visualize")
         return
     try:
-        mat, cmap, norm, legend_labels = profiles_to_numeric_matrix(headers, variable_positions, profiles)
+        mat, cmap, norm, legend_labels = profiles_to_numeric_matrix(profiles_array)
     except Exception as e:
         log(f"Warning: failed to build numeric matrix: {e}")
         return
@@ -253,7 +272,7 @@ def plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matr
         g.ax_heatmap.tick_params(axis='y', labelsize=max(4, min(9, int(120 / max(h, 1)))))
     except Exception as e:
         log(f"Warning: failed to set y-axis labels: {e}")
-    overlay_profile_text(g, profiles, headers)
+    overlay_profile_text(g, profiles_array, headers)
     try:
         g.ax_heatmap.set_title("Profiles heatmap with dendrogram", pad=12)
     except Exception:

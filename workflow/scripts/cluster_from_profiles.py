@@ -9,21 +9,11 @@ This script:
 4. Outputs cluster assignments IF clusters are found
 """
 
-"""Cluster detection from per-read profiles.
-
-Imports are organized into standard library, third-party scientific stack.
-"""
-
-# Standard library
 import sys
 import argparse
 from pathlib import Path
 from collections import defaultdict
-
-# Third-party
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")  # Non-interactive backend for pipeline/server environments
 from scipy.cluster.hierarchy import linkage, fcluster
 
 # Local visualization helpers separated out
@@ -41,85 +31,126 @@ def log(msg: str) -> None:
 
 
 def read_profiles(profile_file):
-    """Read read profiles from TSV file.
+    """Read read profiles from TSV file using vectorized numpy operations.
     
     Returns:
-        Tuple of (profiles_dict, variable_positions)
-        - profiles_dict: {read_id: tuple of characters at variable positions}
+        Tuple of (headers, profiles_array, variable_positions)
+        - headers: list of read IDs in file order
+        - profiles_array: (n_reads, n_positions) numpy array of characters (dtype='S1')
         - variable_positions: list of position numbers (parsed from header)
     """
-    profiles = {}
-    variable_positions = []
-    
     with open(profile_file) as f:
         # Parse header to get variable positions
         header = f.readline().strip().split('\t')
         variable_positions = [int(pos.replace('pos_', '')) for pos in header[1:]]
         
-        # Parse each read's profile
-        for line in f:
-            if not line.strip():
-                continue
-            fields = line.strip().split('\t')
-            read_id = fields[0]
-            profile = tuple(fields[1:])
-            profiles[read_id] = profile
+        # Read all lines at once and filter empty
+        lines = [line.strip() for line in f if line.strip()]
     
-    return profiles, variable_positions
+    if not lines:
+        return [], np.zeros((0, len(variable_positions)), dtype='S1'), variable_positions
+    
+    # Vectorized split: use numpy's vectorized string operations
+    # Split all lines in batch
+    split_lines = [line.split('\t') for line in lines]
+    
+    # Convert to numpy array for vectorized indexing
+    data = np.array(split_lines, dtype=str)
+    headers = data[:, 0].tolist()
+    profiles_array = data[:, 1:].astype('S1')  # ASCII bytes for memory efficiency
+    
+    return headers, profiles_array, variable_positions
 
 
-def hamming_distance(profile1, profile2):
-    """Calculate Hamming-like distance between two profiles.
-
-    Neutral characters ('.','N') are ignored; mismatches among remaining positions count as 1.
+def validate_profiles(headers, profiles_array, variable_positions):
+    """Validate profile consistency and completeness.
+    
+    Args:
+        headers: list of read IDs
+        profiles_array: (n_reads, n_positions) numpy array
+        variable_positions: list of expected position numbers
+    
+    Raises:
+        ValueError: if profiles have inconsistent lengths or don't match variable_positions
+    
+    Returns:
+        None (raises on error)
     """
-    dist = 0
-    for c1, c2 in zip(profile1, profile2):
-        if c1 in {'.','N'} or c2 in {'.','N'}:
-            continue
-        if c1 != c2:
-            dist += 1
-    return dist
+    expected_length = len(variable_positions)
+    n_reads = len(headers)
+    
+    if expected_length == 0:
+        log("Warning: No variable positions in profile file")
+        return
+    
+    if n_reads == 0:
+        log("Warning: No profiles found in file")
+        return
+    
+    # Vectorized validation: check array shape
+    if profiles_array.shape != (n_reads, expected_length):
+        actual_cols = profiles_array.shape[1] if len(profiles_array.shape) > 1 else 0
+        error_msg = f"Profile shape mismatch: expected ({n_reads}, {expected_length}), got {profiles_array.shape}\n"
+        error_msg += f"All profiles must have exactly {expected_length} positions.\n"
+        raise ValueError(error_msg)
+    
+    log(f"Profile validation passed: {n_reads} reads × {expected_length} positions")
 
-def compute_distance_matrix(profiles, neutral_chars={'.','N'}, max_tensor_cells=2_50_000_000):
-    """Vectorized pairwise distance computation with memory guard."""
-    headers = list(profiles.keys())
-    n = len(headers)
-    if n == 0:
-        return np.zeros((0,0))
-    m = len(profiles[headers[0]]) if profiles[headers[0]] else 0
-    if n == 1 or m == 0:
-        return np.zeros((n,n))
-    if n * n * m > max_tensor_cells:
-        dist_matrix = np.zeros((n,n), dtype=float)
-        for i in range(n):
-            pi = profiles[headers[i]]
-            for j in range(i+1, n):
-                pj = profiles[headers[j]]
-                dist = hamming_distance(pi, pj)
-                dist_matrix[i,j] = dist
-                dist_matrix[j,i] = dist
-        return dist_matrix
-    char_array = np.array([profiles[h] for h in headers], dtype='U1')
-    neutral_mask = np.isin(char_array, list(neutral_chars))
-    mismatches = char_array[:, None, :] != char_array[None, :, :]
-    neutrals = neutral_mask[:, None, :] | neutral_mask[None, :, :]
-    effective = mismatches & ~neutrals
-    return effective.sum(axis=2).astype(float)
 
-def compute_linkage_and_dist(profiles, neutral_chars={'.','N'}, max_tensor_cells=2_50_000_000):
-    """Compute distance matrix and hierarchical linkage.
-
-    Returns (headers, dist_matrix, linkage_matrix)."""
-    headers = list(profiles.keys())
-    n = len(headers)
-    dist_matrix = compute_distance_matrix(profiles, neutral_chars=neutral_chars, max_tensor_cells=max_tensor_cells)
+def condensed_distances(char_array, neutral_mask):
+    """Compute condensed pairwise distance vector (upper triangle, 1D).
+    
+    Returns 1D array of length n*(n-1)/2 suitable for scipy.linkage.
+    Distance ignores neutral positions and counts mismatches.
+    """
+    n, m = char_array.shape
     if n < 2:
-        return headers, dist_matrix, None
-    triu_idx = np.triu_indices(n, k=1)
-    distances = dist_matrix[triu_idx]
-    Z = linkage(distances, method='average')
-    return headers, dist_matrix, Z
+        return np.array([])
+    # Vectorized pairwise comparison for upper triangle
+    # Build index pairs for condensed form
+    i_idx, j_idx = np.triu_indices(n, k=1)
+    # Broadcasting: compare all pairs
+    mismatches = char_array[i_idx, :] != char_array[j_idx, :]  # (num_pairs, m)
+    neutrals = neutral_mask[i_idx, :] | neutral_mask[j_idx, :]  # (num_pairs, m)
+    effective = mismatches & ~neutrals
+    distances = effective.sum(axis=1).astype(float)
+    return distances
+
+
+def square_from_condensed(condensed, n):
+    """Build square distance matrix from condensed 1D vector."""
+    if n < 2:
+        return np.zeros((n, n))
+    dist_matrix = np.zeros((n, n), dtype=float)
+    i_idx, j_idx = np.triu_indices(n, k=1)
+    dist_matrix[i_idx, j_idx] = condensed
+    dist_matrix[j_idx, i_idx] = condensed  # Symmetric
+    return dist_matrix
+
+
+def compute_linkage_and_dist(headers, profiles_array, neutral_chars={'.','N'}, linkage_method='average'):
+    """Compute condensed distances and hierarchical linkage.
+    
+    Args:
+        headers: list of read IDs
+        profiles_array: (n_reads, n_positions) numpy array (dtype='S1')
+        neutral_chars: set/iterable of characters to ignore in distance
+        linkage_method: scipy linkage method ('average', 'single', 'complete', 'ward', etc.)
+    
+    Returns (condensed_distances, linkage_matrix).
+    Condensed distances are 1D (n*(n-1)/2); use square_from_condensed for plotting.
+    """
+    n = len(headers)
+    if n < 2:
+        return np.array([]), None
+    
+    # Build neutral mask directly from profiles_array
+    neutral_list = [s.encode('ascii') if isinstance(s, str) else s for s in neutral_chars]
+    neutral_mask = np.isin(profiles_array, neutral_list)
+    
+    distances = condensed_distances(profiles_array, neutral_mask)
+    Z = linkage(distances, method=linkage_method)
+    return distances, Z
 
 def compute_cut_height(Z, max_clusters: int = 10):
     """Heuristic cut height: largest gap in merge distances within cluster count bounds."""
@@ -141,23 +172,36 @@ def compute_cut_height(Z, max_clusters: int = 10):
     num_clusters = n - max_idx - 1
     return float(cut_height), int(num_clusters)
 
-def hierarchical_cluster(profiles, max_clusters=10, neutral_chars={'.','N'}, max_tensor_cells=2_50_000_000):
-    """Cluster reads using hierarchical clustering + gap heuristic."""
-    if len(profiles) < 2:
-        return [set(profiles.keys())], None, None
-    headers, dist_matrix, Z = compute_linkage_and_dist(profiles, neutral_chars=neutral_chars, max_tensor_cells=max_tensor_cells)
+def hierarchical_cluster(headers, profiles_array, max_clusters=10, neutral_chars={'.','N'}, linkage_method='average'):
+    """Cluster reads using hierarchical clustering + gap heuristic.
+    
+    Args:
+        headers: list of read IDs
+        profiles_array: (n_reads, n_positions) numpy array (dtype='S1')
+        max_clusters: maximum number of clusters to detect
+        neutral_chars: set/iterable of characters to ignore in distance (configurable via CLI)
+        linkage_method: scipy linkage method (configurable via CLI)
+    
+    Returns (clusters, linkage_matrix, condensed_distances):
+        - clusters: list of sets of read IDs
+        - linkage_matrix: scipy linkage matrix (or None)
+        - condensed_distances: 1D distance vector (or empty array)
+    """
+    if len(headers) < 2:
+        return [set(headers)], None, np.array([])
+    condensed_dist, Z = compute_linkage_and_dist(headers, profiles_array, neutral_chars=neutral_chars, linkage_method=linkage_method)
     if Z is None:
-        return [set(headers)], None, dist_matrix
+        return [set(headers)], None, condensed_dist
     cut_height, n_clusters = compute_cut_height(Z, max_clusters=max_clusters)
     if n_clusters <= 1:
         log("No significant clustering gap found, using single cluster")
-        return [set(headers)], Z, dist_matrix
+        return [set(headers)], Z, condensed_dist
     log(f"Hierarchical clustering: cutting at height {cut_height:.1f} -> {n_clusters} clusters")
     cluster_labels = fcluster(Z, cut_height, criterion='distance')
     clusters_dict = defaultdict(set)
     for i, label in enumerate(cluster_labels):
         clusters_dict[label].add(headers[i])
-    return list(clusters_dict.values()), Z, dist_matrix
+    return list(clusters_dict.values()), Z, condensed_dist
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -177,9 +221,14 @@ def get_parser() -> argparse.ArgumentParser:
                    help="Minimum variable positions required to attempt clustering")
     p.add_argument("--min_reads_to_cluster", type=int, default=None,
                    help="Minimum reads required (default 2 * min_cluster_size)")
+    p.add_argument("--neutral_chars", type=str, default=".N",
+                   help="Characters to treat as neutral (ignored in distance). Default: '.N'")
+    p.add_argument("--linkage_method", type=str, default="average",
+                   choices=["average", "single", "complete", "weighted", "centroid", "median", "ward"],
+                   help="Linkage method for hierarchical clustering. Default: 'average'")
     return p
 
-def check_clustering_preconditions(profiles, variable_positions, args, outdir, viz_out_path):
+def check_clustering_preconditions(n_reads, variable_positions, args, outdir, viz_out_path):
     """Validate variation and read count; handle trivial outputs. Returns True if clustering should proceed."""
     if len(variable_positions) < args.min_variable_positions:
         log(f"Too few variable positions for meaningful clustering (found={len(variable_positions)}, required={args.min_variable_positions})")
@@ -189,8 +238,8 @@ def check_clustering_preconditions(profiles, variable_positions, args, outdir, v
             write_trivial_profiles_viz(viz_out_path, "No variable positions to visualize")
         return False
     min_reads_required = args.min_reads_to_cluster if args.min_reads_to_cluster is not None else (args.min_cluster_size * 2)
-    if len(profiles) < min_reads_required:
-        log(f"Too few sequences for clustering ({len(profiles)} < {min_reads_required})")
+    if n_reads < min_reads_required:
+        log(f"Too few sequences for clustering ({n_reads} < {min_reads_required})")
         with open(outdir / "no_clusters.txt", "w") as f:
             f.write("single_cluster\n")
         if viz_out_path:
@@ -220,25 +269,44 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
     viz_out_path = (outdir / args.viz_out) if args.viz_out else None
     
+    # Parse neutral characters (convert string to set)
+    neutral_chars = set(args.neutral_chars)
+    log(f"Neutral characters (ignored in distance): {sorted(neutral_chars)}")
+    log(f"Linkage method: {args.linkage_method}")
+    
     # Check if profile file exists
     if not profile_file.exists():
         log(f"Error: Profile file not found: {profile_file}")
         sys.exit(1)
     
     # Read profiles
-    profiles, variable_positions = read_profiles(profile_file)
-    log(f"Loaded {len(profiles)} read profiles with {len(variable_positions)} variable positions")
+    headers, profiles_array, variable_positions = read_profiles(profile_file)
+    log(f"Loaded {len(headers)} read profiles with {len(variable_positions)} variable positions")
+    
+    # Validate profile consistency
+    try:
+        validate_profiles(headers, profiles_array, variable_positions)
+    except ValueError as e:
+        log(f"Error: Profile validation failed")
+        log(str(e))
+        sys.exit(1)
     
     # Precondition checks (variation & read count)
-    if not check_clustering_preconditions(profiles, variable_positions, args, outdir, viz_out_path):
+    if not check_clustering_preconditions(len(headers), variable_positions, args, outdir, viz_out_path):
         return
     
     # Cluster reads
-    clusters, linkage_matrix, dist_matrix = hierarchical_cluster(profiles, max_clusters=args.max_clusters)
+    clusters, linkage_matrix, condensed_dist = hierarchical_cluster(
+        headers,
+        profiles_array,
+        max_clusters=args.max_clusters, 
+        neutral_chars=neutral_chars,
+        linkage_method=args.linkage_method
+    )
     log(f"Found {len(clusters)} clusters")
     
     # Calculate minimum cluster size
-    total_reads = len(profiles)
+    total_reads = len(headers)
     min_size_from_percent = int(total_reads * (args.min_cluster_size_percent / 100.0))
     effective_min_size = max(args.min_cluster_size, min_size_from_percent)
     
@@ -249,15 +317,16 @@ def main():
     log(f"{len(valid_clusters)} clusters meet minimum size threshold")
     
     # Build cluster assignments for visualization (valid clusters only)
-    headers = list(profiles.keys())
     cluster_assignments = assign_cluster_labels(valid_clusters)
 
-    # Generate distance heatmap
+    # Generate distance heatmap (build square matrix only when needed for plotting)
     distance_heatmap_path = outdir / "distance_heatmap.png"
     try:
-        # Fallback to zero matrix if no distances available (e.g., single read)
-        if dist_matrix is None:
-            dist_matrix = np.zeros((len(headers), len(headers)))
+        n = len(headers)
+        if len(condensed_dist) == 0:
+            dist_matrix = np.zeros((n, n))
+        else:
+            dist_matrix = square_from_condensed(condensed_dist, n)
         plot_distance_heatmap(dist_matrix, headers, linkage_matrix, distance_heatmap_path, cluster_assignments=cluster_assignments if cluster_assignments else None)
     except Exception as e:
         log(f"Warning: failed to generate distance heatmap: {e}")
@@ -265,7 +334,7 @@ def main():
     # Produce integrated visualization (with side color bar) if requested
     if viz_out_path:
         try:
-            plot_profiles_clustermap(headers, variable_positions, profiles, linkage_matrix, viz_out_path, cluster_assignments=cluster_assignments)
+            plot_profiles_clustermap(headers, profiles_array, variable_positions, linkage_matrix, viz_out_path, cluster_assignments=cluster_assignments)
         except Exception as e:
             log(f"Warning: failed to generate integrated viz: {e}")
     
