@@ -94,6 +94,7 @@ rule detect_clusters:
         min_cluster_size_percent=CLUSTERING_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters=CLUSTERING_MAX_CLUSTERS,
         min_variable_positions=CLUSTERING_MIN_VARIABLE_POSITIONS,
+        clustering_method=CLUSTERING_METHOD,
         viz_out_flag=CLUSTER_DETECTION_VIZ_FLAG,
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
@@ -109,6 +110,7 @@ rule detect_clusters:
                     --min_cluster_size_percent {params.min_cluster_size_percent} \
                     --max_clusters {params.max_clusters} \
                     --min_variable_positions {params.min_variable_positions} \
+                    --clustering_method {params.clustering_method} \
                     2> {log}
         """
 

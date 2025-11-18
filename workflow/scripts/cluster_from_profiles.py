@@ -172,8 +172,64 @@ def compute_cut_height(Z, max_clusters: int = 10):
     num_clusters = n - max_idx - 1
     return float(cut_height), int(num_clusters)
 
-def hierarchical_cluster(headers, profiles_array, max_clusters=10, neutral_chars={'.','N'}, linkage_method='average'):
-    """Cluster reads using hierarchical clustering + gap heuristic.
+
+def compute_cut_height_silhouette(Z, condensed_dist, max_clusters: int = 10, min_clusters: int = 2):
+    """Find optimal cut height by maximizing silhouette score.
+    
+    Args:
+        Z: scipy linkage matrix
+        condensed_dist: 1D condensed distance vector
+        max_clusters: maximum number of clusters to test
+        min_clusters: minimum number of clusters to test
+    
+    Returns (cut_height, n_clusters, best_silhouette_score)
+    """
+    from sklearn.metrics import silhouette_score
+    from scipy.spatial.distance import squareform
+    
+    if Z is None or len(Z) == 0:
+        return 0.0, 1, 0.0
+    
+    n = Z.shape[0] + 1
+    if n < min_clusters:
+        return 0.0, 1, 0.0
+    
+    # Build square distance matrix for silhouette computation
+    dist_matrix = squareform(condensed_dist)
+    
+    best_score = -1.0
+    best_n_clusters = min_clusters
+    best_height = 0.0
+    
+    # Test different numbers of clusters
+    for n_clusters in range(min_clusters, min(max_clusters + 1, n)):
+        # Cut dendrogram to get n_clusters
+        labels = fcluster(Z, n_clusters, criterion='maxclust')
+        
+        # Skip if only one cluster resulted (shouldn't happen with maxclust, but be safe)
+        if len(np.unique(labels)) < 2:
+            continue
+        
+        # Compute silhouette score
+        try:
+            score = silhouette_score(dist_matrix, labels, metric='precomputed')
+            log(f"  Silhouette score for {n_clusters} clusters: {score:.3f}")
+            
+            if score > best_score:
+                best_score = score
+                best_n_clusters = n_clusters
+                # Find the height that gives this number of clusters
+                # Use maxclust criterion to get exact n_clusters
+                best_height = n_clusters
+        except Exception as e:
+            log(f"  Warning: silhouette computation failed for {n_clusters} clusters: {e}")
+            continue
+    
+    log(f"Best silhouette score: {best_score:.3f} at {best_n_clusters} clusters")
+    return float(best_height), int(best_n_clusters), float(best_score)
+
+def hierarchical_cluster(headers, profiles_array, max_clusters=10, neutral_chars={'.','N'}, linkage_method='average', clustering_method='gap', hdbscan_min_cluster_size=None, hdbscan_min_samples=None, hdbscan_cluster_selection_method='eom'):
+    """Cluster reads using hierarchical clustering with configurable cut criterion.
     
     Args:
         headers: list of read IDs
@@ -181,6 +237,8 @@ def hierarchical_cluster(headers, profiles_array, max_clusters=10, neutral_chars
         max_clusters: maximum number of clusters to detect
         neutral_chars: set/iterable of characters to ignore in distance (configurable via CLI)
         linkage_method: scipy linkage method (configurable via CLI)
+    clustering_method: method to determine clusters ('gap', 'silhouette', or 'hdbscan')
+    hdbscan_min_cluster_size: optional min cluster size to pass to HDBSCAN (defaults to args.min_cluster_size)
     
     Returns (clusters, linkage_matrix, condensed_distances):
         - clusters: list of sets of read IDs
@@ -192,12 +250,59 @@ def hierarchical_cluster(headers, profiles_array, max_clusters=10, neutral_chars
     condensed_dist, Z = compute_linkage_and_dist(headers, profiles_array, neutral_chars=neutral_chars, linkage_method=linkage_method)
     if Z is None:
         return [set(headers)], None, condensed_dist
-    cut_height, n_clusters = compute_cut_height(Z, max_clusters=max_clusters)
-    if n_clusters <= 1:
-        log("No significant clustering gap found, using single cluster")
-        return [set(headers)], Z, condensed_dist
-    log(f"Hierarchical clustering: cutting at height {cut_height:.1f} -> {n_clusters} clusters")
-    cluster_labels = fcluster(Z, cut_height, criterion='distance')
+    
+    # Choose clustering method
+    if clustering_method == 'silhouette':
+        log("Using silhouette score to determine optimal number of clusters")
+        cut_height, n_clusters, silhouette = compute_cut_height_silhouette(Z, condensed_dist, max_clusters=max_clusters)
+        if n_clusters <= 1:
+            log("Silhouette analysis suggests single cluster")
+            return [set(headers)], Z, condensed_dist
+        log(f"Hierarchical clustering (silhouette): {n_clusters} clusters (score={silhouette:.3f})")
+        # Use maxclust criterion to get exact number of clusters
+        cluster_labels = fcluster(Z, n_clusters, criterion='maxclust')
+    elif clustering_method == 'hdbscan':
+        # HDBSCAN on precomputed distances; keep Z for visualization ordering
+        try:
+            try:
+                import hdbscan  # type: ignore
+            except ImportError:
+                log("Error: hdbscan package is not installed. Please add 'hdbscan' to the conda env.")
+                return [set(headers)], Z, condensed_dist
+            # Build square distance matrix
+            n = len(headers)
+            from scipy.spatial.distance import squareform
+            dist_matrix = squareform(condensed_dist) if n > 1 else np.zeros((n, n), dtype=float)
+            min_cs = int(hdbscan_min_cluster_size) if hdbscan_min_cluster_size is not None else 2
+            min_samp = int(hdbscan_min_samples) if hdbscan_min_samples is not None else min_cs
+            clusterer = hdbscan.HDBSCAN(
+                metric='precomputed',
+                min_cluster_size=max(2, min_cs),
+                min_samples=max(1, min_samp),
+                cluster_selection_method=hdbscan_cluster_selection_method,
+                allow_single_cluster=True
+            )
+            labels = clusterer.fit_predict(dist_matrix)
+            # Map labels (>=0) to clusters; ignore noise (-1) for now
+            clusters_dict = defaultdict(set)
+            for i, lab in enumerate(labels):
+                if lab >= 0:
+                    clusters_dict[int(lab)].add(headers[i])
+            if not clusters_dict:
+                log("HDBSCAN found no clusters (all noise). Returning single cluster")
+                return [set(headers)], Z, condensed_dist
+            return list(clusters_dict.values()), Z, condensed_dist
+        except Exception as e:
+            log(f"HDBSCAN clustering failed: {e}. Falling back to gap heuristic.")
+            clustering_method = 'gap'
+    else:  # gap heuristic (default)
+        cut_height, n_clusters = compute_cut_height(Z, max_clusters=max_clusters)
+        if n_clusters <= 1:
+            log("No significant clustering gap found, using single cluster")
+            return [set(headers)], Z, condensed_dist
+        log(f"Hierarchical clustering (gap): cutting at height {cut_height:.1f} -> {n_clusters} clusters")
+        cluster_labels = fcluster(Z, cut_height, criterion='distance')
+    
     clusters_dict = defaultdict(set)
     for i, label in enumerate(cluster_labels):
         clusters_dict[label].add(headers[i])
@@ -226,6 +331,14 @@ def get_parser() -> argparse.ArgumentParser:
     p.add_argument("--linkage_method", type=str, default="average",
                    choices=["average", "single", "complete", "weighted", "centroid", "median", "ward"],
                    help="Linkage method for hierarchical clustering. Default: 'average'")
+    p.add_argument("--clustering_method", type=str, default="hdbscan",
+                   choices=["gap", "silhouette", "hdbscan"],
+                   help="Clustering method: 'gap' (largest dendrogram gap), 'silhouette' (maximize silhouette), or 'hdbscan' (density-based). Default: 'hdbscan'")
+    p.add_argument("--hdbscan_min_samples", type=int, default=None,
+                   help="Optional: HDBSCAN min_samples (defaults to --min_cluster_size if not provided)")
+    p.add_argument("--hdbscan_cluster_selection_method", type=str, default="eom",
+                   choices=["eom", "leaf"],
+                   help="HDBSCAN cluster selection method ('eom' or 'leaf'). Default: 'eom'")
     return p
 
 def check_clustering_preconditions(n_reads, variable_positions, args, outdir, viz_out_path):
@@ -273,6 +386,7 @@ def main():
     neutral_chars = set(args.neutral_chars)
     log(f"Neutral characters (ignored in distance): {sorted(neutral_chars)}")
     log(f"Linkage method: {args.linkage_method}")
+    log(f"Clustering method: {args.clustering_method}")
     
     # Check if profile file exists
     if not profile_file.exists():
@@ -301,7 +415,11 @@ def main():
         profiles_array,
         max_clusters=args.max_clusters, 
         neutral_chars=neutral_chars,
-        linkage_method=args.linkage_method
+        linkage_method=args.linkage_method,
+        clustering_method=args.clustering_method,
+        hdbscan_min_cluster_size=args.min_cluster_size,
+        hdbscan_min_samples=(args.hdbscan_min_samples if args.hdbscan_min_samples is not None else args.min_cluster_size),
+        hdbscan_cluster_selection_method=args.hdbscan_cluster_selection_method
     )
     log(f"Found {len(clusters)} clusters")
     

@@ -119,9 +119,25 @@ clustering_algorithm:
   # Maximum number of clusters to consider
   # Hierarchical clustering will automatically find optimal number up to this limit
   max_clusters: 10
+  
+  # Method to determine optimal number of clusters:
+  # "gap" - use largest gap in dendrogram merge distances (faster, heuristic)
+  # "silhouette" - maximize silhouette score (slower, more rigorous)
+  # "hdbscan" - density-based clustering (no k), robust for noise
+  # Default: "hdbscan"
+  clustering_method: "hdbscan"
 
-  min_gap_height: 0.05  # Minimum gap height for cutting dendrogram
-  min_sillhouette: 0.1  # Minimum silhouette score for accepting clusters
+# QC clustering settings (for final consensus sequence clustering in QC report)
+qc_clustering:
+  # Method to determine optimal number of clusters in QC alignment
+  # "gap" - use largest gap in dendrogram merge distances (faster, heuristic)
+  # "silhouette" - maximize silhouette score (slower, more rigorous)
+  # "hdbscan" - density-based clustering (no k)
+  # Default: "hdbscan"
+  clustering_method: "hdbscan"
+  
+  # Maximum number of clusters to consider in QC clustering
+  max_clusters: 10
 
 # ==================== Cluster realignment and consensuss ====================
 

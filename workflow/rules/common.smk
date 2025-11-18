@@ -74,11 +74,16 @@ PROFILE_GEN_MAX_TRIM = config.get("per_read_profile_generation", {}).get("max_tr
 PROFILE_GEN_COMPRESS_GAPS = config.get("per_read_profile_generation", {}).get("compress_gaps", False)
 PROFILE_GEN_ENABLE_VIZ = config.get("per_read_profile_generation", {}).get("enable_viz", True)
 
-# Clustering algorithm parameters
+# Clustering algorithm parameters (per-sample clustering)
 CLUSTERING_MIN_VARIABLE_POSITIONS = config.get("clustering_algorithm", {}).get("min_variable_positions", 3)
 CLUSTERING_MIN_CLUSTER_SIZE = config.get("clustering_algorithm", {}).get("min_cluster_size", 5)
 CLUSTERING_MIN_CLUSTER_SIZE_PERCENT = config.get("clustering_algorithm", {}).get("min_cluster_size_percent", 5.0)
 CLUSTERING_MAX_CLUSTERS = config.get("clustering_algorithm", {}).get("max_clusters", 10)
+CLUSTERING_METHOD = config.get("clustering_algorithm", {}).get("clustering_method", "hdbscan")
+
+# QC clustering parameters (final consensus sequence clustering)
+QC_CLUSTERING_METHOD = config.get("qc_clustering", {}).get("clustering_method", "hdbscan")
+QC_CLUSTERING_MAX_CLUSTERS = config.get("qc_clustering", {}).get("max_clusters", 10)
 
 # Secondary alignment (cluster realignment) parameters
 SECONDARY_ALIGNMENT_MAFFT_ALGORITHM = config.get("secondary_alignment", {}).get("mafft_algorithm", "ginsi")

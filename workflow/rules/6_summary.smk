@@ -74,7 +74,9 @@ rule cluster_from_qc_profile:
         heatmap = QC_DIR / "qc_profile_clustering" / "qc_profile_clustering_heatmap.png",
         distance_heatmap = QC_DIR / "qc_profile_clustering" / "distance_heatmap.png"
     params:
-        outdir = QC_DIR / "qc_profile_clustering"
+        outdir = QC_DIR / "qc_profile_clustering",
+        clustering_method = QC_CLUSTERING_METHOD,
+        max_clusters = QC_CLUSTERING_MAX_CLUSTERS
     conda:
         "../envs/qc.yaml"
     log:
@@ -88,6 +90,8 @@ rule cluster_from_qc_profile:
             --viz_out $(basename {output.heatmap}) \
             --min_variable_positions 1 \
             --min_reads_to_cluster 1 \
+            --clustering_method {params.clustering_method} \
+            --max_clusters {params.max_clusters} \
             2> {log}
         """
 
