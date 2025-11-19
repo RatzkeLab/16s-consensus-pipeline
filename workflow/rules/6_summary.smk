@@ -76,7 +76,9 @@ rule cluster_from_qc_profile:
     params:
         outdir = QC_DIR / "qc_profile_clustering",
         clustering_method = QC_CLUSTERING_METHOD,
-        max_clusters = QC_CLUSTERING_MAX_CLUSTERS
+        max_clusters = QC_CLUSTERING_MAX_CLUSTERS,
+        hdbscan_min_samples_flag = QC_HDBSCAN_MIN_SAMPLES_FLAG,
+        hdbscan_selection_flag = QC_HDBSCAN_SELECTION_FLAG
     conda:
         "../envs/qc.yaml"
     log:
@@ -92,6 +94,8 @@ rule cluster_from_qc_profile:
             --min_reads_to_cluster 1 \
             --clustering_method {params.clustering_method} \
             --max_clusters {params.max_clusters} \
+            {params.hdbscan_min_samples_flag} \
+            {params.hdbscan_selection_flag} \
             2> {log}
         """
 

@@ -43,6 +43,8 @@ rule generate_profiles:
         max_trim=PROFILE_GEN_MAX_TRIM,
         compress_gaps=PROFILE_GEN_COMPRESS_GAPS,
         compress_gaps_flag=PROFILE_GEN_COMPRESS_GAPS_FLAG,
+        hdbscan_min_samples_flag=CLUSTERING_HDBSCAN_MIN_SAMPLES_FLAG,
+        hdbscan_selection_flag=CLUSTERING_HDBSCAN_SELECTION_FLAG,
     log:
         LOG_DIR / "generate_profiles" / "{sample}.log"
     conda:
@@ -58,6 +60,8 @@ rule generate_profiles:
           --min_trim {params.min_trim} \
           --max_trim {params.max_trim} \
           {params.compress_gaps_flag} \
+          {params.hdbscan_min_samples_flag} \
+          {params.hdbscan_selection_flag} \
           2> {log}
         """
 

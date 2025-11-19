@@ -408,7 +408,13 @@ def main():
     # Precondition checks (variation & read count)
     if not check_clustering_preconditions(len(headers), variable_positions, args, outdir, viz_out_path):
         return
-    
+
+    # Calculate effective minimum cluster size (used by both filtering and HDBSCAN)
+    total_reads = len(headers)
+    min_size_from_percent = int(total_reads * (args.min_cluster_size_percent / 100.0))
+    effective_min_size = max(args.min_cluster_size, min_size_from_percent)
+    log(f"Minimum cluster size: {effective_min_size} reads (absolute={args.min_cluster_size}, percent={args.min_cluster_size_percent}% = {min_size_from_percent} reads)")
+
     # Cluster reads
     clusters, linkage_matrix, condensed_dist = hierarchical_cluster(
         headers,
@@ -417,18 +423,11 @@ def main():
         neutral_chars=neutral_chars,
         linkage_method=args.linkage_method,
         clustering_method=args.clustering_method,
-        hdbscan_min_cluster_size=args.min_cluster_size,
-        hdbscan_min_samples=(args.hdbscan_min_samples if args.hdbscan_min_samples is not None else args.min_cluster_size),
+        hdbscan_min_cluster_size=effective_min_size,
+        hdbscan_min_samples=(args.hdbscan_min_samples if args.hdbscan_min_samples is not None else effective_min_size),
         hdbscan_cluster_selection_method=args.hdbscan_cluster_selection_method
     )
     log(f"Found {len(clusters)} clusters")
-    
-    # Calculate minimum cluster size
-    total_reads = len(headers)
-    min_size_from_percent = int(total_reads * (args.min_cluster_size_percent / 100.0))
-    effective_min_size = max(args.min_cluster_size, min_size_from_percent)
-    
-    log(f"Minimum cluster size: {effective_min_size} reads (absolute={args.min_cluster_size}, percent={args.min_cluster_size_percent}% = {min_size_from_percent} reads)")
     
     # Filter clusters by size
     valid_clusters = [c for c in clusters if len(c) >= effective_min_size]

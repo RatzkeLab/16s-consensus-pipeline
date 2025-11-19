@@ -127,6 +127,9 @@ clustering_algorithm:
   # Default: "hdbscan"
   clustering_method: "hdbscan"
 
+  hdbscan_cluster_selection_method: "eom"  # HDBSCAN cluster selection method ("eom" or "leaf")
+  hdbscan_min_samples: 5
+
 # QC clustering settings (for final consensus sequence clustering in QC report)
 qc_clustering:
   # Method to determine optimal number of clusters in QC alignment
@@ -137,7 +140,12 @@ qc_clustering:
   clustering_method: "hdbscan"
   
   # Maximum number of clusters to consider in QC clustering
-  max_clusters: 10
+  max_clusters: 300
+  min_cluster_size: 1
+
+  # HDBSCAN options for QC clustering
+  hdbscan_cluster_selection_method: "eom"
+  hdbscan_min_samples: 1
 
 # ==================== Cluster realignment and consensuss ====================
 

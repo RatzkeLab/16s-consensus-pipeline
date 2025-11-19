@@ -80,10 +80,14 @@ CLUSTERING_MIN_CLUSTER_SIZE = config.get("clustering_algorithm", {}).get("min_cl
 CLUSTERING_MIN_CLUSTER_SIZE_PERCENT = config.get("clustering_algorithm", {}).get("min_cluster_size_percent", 5.0)
 CLUSTERING_MAX_CLUSTERS = config.get("clustering_algorithm", {}).get("max_clusters", 10)
 CLUSTERING_METHOD = config.get("clustering_algorithm", {}).get("clustering_method", "hdbscan")
+CLUSTERING_HDBSCAN_MIN_SAMPLES = config.get("clustering_algorithm", {}).get("hdbscan_min_samples", None)
+CLUSTERING_HDBSCAN_SELECTION = config.get("clustering_algorithm", {}).get("hdbscan_cluster_selection_method", "eom")
 
 # QC clustering parameters (final consensus sequence clustering)
 QC_CLUSTERING_METHOD = config.get("qc_clustering", {}).get("clustering_method", "hdbscan")
 QC_CLUSTERING_MAX_CLUSTERS = config.get("qc_clustering", {}).get("max_clusters", 10)
+QC_HDBSCAN_MIN_SAMPLES = config.get("qc_clustering", {}).get("hdbscan_min_samples", None)
+QC_HDBSCAN_SELECTION = config.get("qc_clustering", {}).get("hdbscan_cluster_selection_method", "eom")
 
 # Secondary alignment (cluster realignment) parameters
 SECONDARY_ALIGNMENT_MAFFT_ALGORITHM = config.get("secondary_alignment", {}).get("mafft_algorithm", "ginsi")
@@ -209,6 +213,10 @@ def _viz_flag(enabled, output_path):
     """Return --viz_out flag with path if enabled, else empty string."""
     return f"--viz_out {output_path}" if enabled else ""
 
+def _opt_value_flag(name: str, value):
+    """Return a --name value flag string if value is not None, else empty string."""
+    return f"--{name} {value}" if value is not None else ""
+
 # Per-read profile generation flags
 PROFILE_GEN_AUTO_TRIM_FLAG = _bool_flag(PROFILE_GEN_AUTO_TRIM, "--auto_trim")
 PROFILE_GEN_COMPRESS_GAPS_FLAG = _bool_flag(PROFILE_GEN_COMPRESS_GAPS, "--compress_gaps")
@@ -224,4 +232,12 @@ def _get_cluster_viz_flag(filename: str):
 
 # Pre-built cluster detection visualization flag (fixed filename expected by downstream logic)
 CLUSTER_DETECTION_VIZ_FLAG = _get_cluster_viz_flag("profiles_dendrogram.png")
+
+# HDBSCAN flags for per-sample clustering
+CLUSTERING_HDBSCAN_MIN_SAMPLES_FLAG = _opt_value_flag("hdbscan_min_samples", CLUSTERING_HDBSCAN_MIN_SAMPLES)
+CLUSTERING_HDBSCAN_SELECTION_FLAG = _opt_value_flag("hdbscan_cluster_selection_method", CLUSTERING_HDBSCAN_SELECTION)
+
+# HDBSCAN flags for QC clustering
+QC_HDBSCAN_MIN_SAMPLES_FLAG = _opt_value_flag("hdbscan_min_samples", QC_HDBSCAN_MIN_SAMPLES)
+QC_HDBSCAN_SELECTION_FLAG = _opt_value_flag("hdbscan_cluster_selection_method", QC_HDBSCAN_SELECTION)
 
