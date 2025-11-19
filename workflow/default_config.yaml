@@ -131,21 +131,30 @@ clustering_algorithm:
   hdbscan_min_samples: 5
 
 # QC clustering settings (for final consensus sequence clustering in QC report)
+# Fully independent from per-sample clustering
 qc_clustering:
-  # Method to determine optimal number of clusters in QC alignment
-  # "gap" - use largest gap in dendrogram merge distances (faster, heuristic)
-  # "silhouette" - maximize silhouette score (slower, more rigorous)
-  # "hdbscan" - density-based clustering (no k)
-  # Default: "hdbscan"
-  clustering_method: "hdbscan"
+  # Minimum number of variable positions required to attempt clustering
+  min_variable_positions: 1
+  
+  # Minimum number of consensus sequences required to form a separate cluster (absolute)
+  # Minimum cluster size as percentage of total consensus sequences (0-100)
+  # Whichever is larger (absolute or percent) will be used
+  min_cluster_size: 1
+  min_cluster_size_percent: 0.0
   
   # Maximum number of clusters to consider in QC clustering
   max_clusters: 300
-  min_cluster_size: 1
+  
+  # Method to determine optimal number of clusters:
+  # "gap" - use largest gap in dendrogram merge distances (faster, heuristic)
+  # "silhouette" - maximize silhouette score (slower, more rigorous)
+  # "hdbscan" - density-based clustering (no k), robust for noise
+  # Default: "hdbscan"
+  clustering_method: "hdbscan"
 
   # HDBSCAN options for QC clustering
-  hdbscan_cluster_selection_method: "eom"
-  hdbscan_min_samples: 1
+  hdbscan_cluster_selection_method: "eom"  # "eom" or "leaf"
+  hdbscan_min_samples: 1  # Defaults to min_cluster_size if not specified
 
 # ==================== Cluster realignment and consensuss ====================
 

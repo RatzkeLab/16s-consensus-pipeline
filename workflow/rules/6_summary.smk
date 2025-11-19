@@ -75,8 +75,11 @@ rule cluster_from_qc_profile:
         distance_heatmap = QC_DIR / "qc_profile_clustering" / "distance_heatmap.png"
     params:
         outdir = QC_DIR / "qc_profile_clustering",
-        clustering_method = QC_CLUSTERING_METHOD,
+        min_variable_positions = QC_CLUSTERING_MIN_VARIABLE_POSITIONS,
+        min_cluster_size = QC_CLUSTERING_MIN_CLUSTER_SIZE,
+        min_cluster_size_percent = QC_CLUSTERING_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters = QC_CLUSTERING_MAX_CLUSTERS,
+        clustering_method = QC_CLUSTERING_METHOD,
         hdbscan_min_samples_flag = QC_HDBSCAN_MIN_SAMPLES_FLAG,
         hdbscan_selection_flag = QC_HDBSCAN_SELECTION_FLAG
     conda:
@@ -90,10 +93,11 @@ rule cluster_from_qc_profile:
             {input.profile} \
             {params.outdir} \
             --viz_out $(basename {output.heatmap}) \
-            --min_variable_positions 1 \
-            --min_reads_to_cluster 1 \
-            --clustering_method {params.clustering_method} \
+            --min_variable_positions {params.min_variable_positions} \
+            --min_cluster_size {params.min_cluster_size} \
+            --min_cluster_size_percent {params.min_cluster_size_percent} \
             --max_clusters {params.max_clusters} \
+            --clustering_method {params.clustering_method} \
             {params.hdbscan_min_samples_flag} \
             {params.hdbscan_selection_flag} \
             2> {log}
