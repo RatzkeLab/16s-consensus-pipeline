@@ -244,3 +244,25 @@ CLUSTERING_HDBSCAN_SELECTION_FLAG = _opt_value_flag("hdbscan_cluster_selection_m
 QC_HDBSCAN_MIN_SAMPLES_FLAG = _opt_value_flag("hdbscan_min_samples", QC_HDBSCAN_MIN_SAMPLES)
 QC_HDBSCAN_SELECTION_FLAG = _opt_value_flag("hdbscan_cluster_selection_method", QC_HDBSCAN_SELECTION)
 
+# Consolidated clustering flags for per-sample clustering (used in detect_clusters rule)
+CLUSTERING_FLAGS = (
+    f"--min_cluster_size {CLUSTERING_MIN_CLUSTER_SIZE} "
+    f"--min_cluster_size_percent {CLUSTERING_MIN_CLUSTER_SIZE_PERCENT} "
+    f"--max_clusters {CLUSTERING_MAX_CLUSTERS} "
+    f"--min_variable_positions {CLUSTERING_MIN_VARIABLE_POSITIONS} "
+    f"--clustering_method {CLUSTERING_METHOD} "
+    f"{CLUSTERING_HDBSCAN_MIN_SAMPLES_FLAG} "
+    f"{CLUSTERING_HDBSCAN_SELECTION_FLAG}"
+).strip()
+
+# Consolidated clustering flags for QC clustering
+QC_CLUSTERING_FLAGS = (
+    f"--min_variable_positions {QC_CLUSTERING_MIN_VARIABLE_POSITIONS} "
+    f"--min_cluster_size {QC_CLUSTERING_MIN_CLUSTER_SIZE} "
+    f"--min_cluster_size_percent {QC_CLUSTERING_MIN_CLUSTER_SIZE_PERCENT} "
+    f"--max_clusters {QC_CLUSTERING_MAX_CLUSTERS} "
+    f"--clustering_method {QC_CLUSTERING_METHOD} "
+    f"{QC_HDBSCAN_MIN_SAMPLES_FLAG} "
+    f"{QC_HDBSCAN_SELECTION_FLAG}"
+).strip()
+

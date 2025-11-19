@@ -90,13 +90,7 @@ rule detect_clusters:
         outdir=directory(CLUSTER_DETECTION_DIR / "{sample}"),
         viz_figure=CLUSTER_DETECTION_DIR / "{sample}" / "profiles_dendrogram.png" if PROFILE_GEN_ENABLE_VIZ else []
     params:
-        min_cluster_size=CLUSTERING_MIN_CLUSTER_SIZE,
-        min_cluster_size_percent=CLUSTERING_MIN_CLUSTER_SIZE_PERCENT,
-        max_clusters=CLUSTERING_MAX_CLUSTERS,
-        min_variable_positions=CLUSTERING_MIN_VARIABLE_POSITIONS,
-        hdbscan_min_samples_flag=CLUSTERING_HDBSCAN_MIN_SAMPLES_FLAG,
-        hdbscan_selection_flag=CLUSTERING_HDBSCAN_SELECTION_FLAG,
-        clustering_method=CLUSTERING_METHOD,
+        clustering_flags=CLUSTERING_FLAGS,
         viz_out_flag=CLUSTER_DETECTION_VIZ_FLAG,
     log:
         LOG_DIR / "detect_clusters" / "{sample}.log"
@@ -104,18 +98,12 @@ rule detect_clusters:
         "../envs/qc.yaml"
     shell:
         """
-                python workflow/scripts/cluster_from_profiles.py \
-                    {input.profile_tsv} \
-                    {output.outdir} \
-                    {params.viz_out_flag} \
-                    --min_cluster_size {params.min_cluster_size} \
-                    --min_cluster_size_percent {params.min_cluster_size_percent} \
-                    --max_clusters {params.max_clusters} \
-                    --min_variable_positions {params.min_variable_positions} \
-                    --clustering_method {params.clustering_method} \
-                    {params.hdbscan_min_samples_flag} \
-                    {params.hdbscan_selection_flag} \
-                    2> {log}
+        python workflow/scripts/cluster_from_profiles.py \
+            {input.profile_tsv} \
+            {output.outdir} \
+            {params.viz_out_flag} \
+            {params.clustering_flags} \
+            2> {log}
         """
 
 # ==================== Split Reads by Cluster ====================
