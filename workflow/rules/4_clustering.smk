@@ -43,8 +43,6 @@ rule generate_profiles:
         max_trim=PROFILE_GEN_MAX_TRIM,
         compress_gaps=PROFILE_GEN_COMPRESS_GAPS,
         compress_gaps_flag=PROFILE_GEN_COMPRESS_GAPS_FLAG,
-        hdbscan_min_samples_flag=CLUSTERING_HDBSCAN_MIN_SAMPLES_FLAG,
-        hdbscan_selection_flag=CLUSTERING_HDBSCAN_SELECTION_FLAG,
     log:
         LOG_DIR / "generate_profiles" / "{sample}.log"
     conda:
@@ -60,8 +58,6 @@ rule generate_profiles:
           --min_trim {params.min_trim} \
           --max_trim {params.max_trim} \
           {params.compress_gaps_flag} \
-          {params.hdbscan_min_samples_flag} \
-          {params.hdbscan_selection_flag} \
           2> {log}
         """
 
@@ -98,6 +94,8 @@ rule detect_clusters:
         min_cluster_size_percent=CLUSTERING_MIN_CLUSTER_SIZE_PERCENT,
         max_clusters=CLUSTERING_MAX_CLUSTERS,
         min_variable_positions=CLUSTERING_MIN_VARIABLE_POSITIONS,
+        hdbscan_min_samples_flag=CLUSTERING_HDBSCAN_MIN_SAMPLES_FLAG,
+        hdbscan_selection_flag=CLUSTERING_HDBSCAN_SELECTION_FLAG,
         clustering_method=CLUSTERING_METHOD,
         viz_out_flag=CLUSTER_DETECTION_VIZ_FLAG,
     log:
@@ -115,6 +113,8 @@ rule detect_clusters:
                     --max_clusters {params.max_clusters} \
                     --min_variable_positions {params.min_variable_positions} \
                     --clustering_method {params.clustering_method} \
+                    {params.hdbscan_min_samples_flag} \
+                    {params.hdbscan_selection_flag} \
                     2> {log}
         """
 
