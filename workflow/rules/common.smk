@@ -83,15 +83,6 @@ CLUSTERING_METHOD = config.get("clustering_algorithm", {}).get("clustering_metho
 CLUSTERING_HDBSCAN_MIN_SAMPLES = config.get("clustering_algorithm", {}).get("hdbscan_min_samples", None)
 CLUSTERING_HDBSCAN_SELECTION = config.get("clustering_algorithm", {}).get("hdbscan_cluster_selection_method", "eom")
 
-# QC clustering parameters (final consensus sequence clustering) - fully independent
-QC_CLUSTERING_MIN_VARIABLE_POSITIONS = config.get("qc_clustering", {}).get("min_variable_positions", 1)
-QC_CLUSTERING_MIN_CLUSTER_SIZE = config.get("qc_clustering", {}).get("min_cluster_size", 1)
-QC_CLUSTERING_MIN_CLUSTER_SIZE_PERCENT = config.get("qc_clustering", {}).get("min_cluster_size_percent", 0.0)
-QC_CLUSTERING_MAX_CLUSTERS = config.get("qc_clustering", {}).get("max_clusters", 10)
-QC_CLUSTERING_METHOD = config.get("qc_clustering", {}).get("clustering_method", "hdbscan")
-QC_HDBSCAN_MIN_SAMPLES = config.get("qc_clustering", {}).get("hdbscan_min_samples", None)
-QC_HDBSCAN_SELECTION = config.get("qc_clustering", {}).get("hdbscan_cluster_selection_method", "eom")
-
 # Secondary alignment (cluster realignment) parameters
 SECONDARY_ALIGNMENT_MAFFT_ALGORITHM = config.get("secondary_alignment", {}).get("mafft_algorithm", "ginsi")
 SECONDARY_ALIGNMENT_GAP_OPEN = config.get("secondary_alignment", {}).get("gap_open", 0)
@@ -113,6 +104,15 @@ QC_ALIGNMENT_GAP_EXTEND = config.get("qc_alignment", {}).get("gap_extend", 0)
 
 # Global consensus parameters
 GLOBAL_CONSENSUS_RECORD_VARIANTS_BELOW = config.get("global_consensus", {}).get("record_variants_below", 0.4)
+
+# QC clustering parameters (final consensus sequence clustering) - fully independent
+QC_CLUSTERING_MIN_VARIABLE_POSITIONS = config.get("qc_clustering", {}).get("min_variable_positions", 1)
+QC_CLUSTERING_MIN_CLUSTER_SIZE = config.get("qc_clustering", {}).get("min_cluster_size", 1)
+QC_CLUSTERING_MIN_CLUSTER_SIZE_PERCENT = config.get("qc_clustering", {}).get("min_cluster_size_percent", 0.0)
+QC_CLUSTERING_MAX_CLUSTERS = config.get("qc_clustering", {}).get("max_clusters", 10)
+QC_CLUSTERING_METHOD = config.get("qc_clustering", {}).get("clustering_method", "hdbscan")
+QC_HDBSCAN_MIN_SAMPLES = config.get("qc_clustering", {}).get("hdbscan_min_samples", None)
+QC_HDBSCAN_SELECTION = config.get("qc_clustering", {}).get("hdbscan_cluster_selection_method", "eom")
 
 # Final outputs
 NAIVE_DATABASE_FILE = OUT_DIR / config.get("naive_database_filename", "naive_db.fasta")
